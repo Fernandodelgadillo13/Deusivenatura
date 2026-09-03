@@ -1,0 +1,1564 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Ágora · Filosofía</title>
+<style>
+  html, body, #root { margin: 0; padding: 0; min-height: 100vh; background: #14151F; }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.3.1",
+    "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+    "lucide-react": "https://esm.sh/lucide-react@0.383.0?external=react"
+  }
+}
+</script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react" data-type="module">
+
+/* ------------------------------------------------------------
+   Sustituto de window.storage (solo disponible dentro de
+   claude.ai) usando localStorage del navegador. Cada estudiante
+   guarda su propia copia de los datos de Terrapesos en su
+   propio navegador, igual que la versión original de
+   terrapesos_web.html.
+   ------------------------------------------------------------ */
+if (!window.storage) {
+  window.storage = {
+    async get(key) {
+      const raw = localStorage.getItem(key);
+      if (raw === null) throw new Error("not found");
+      return { key, value: raw };
+    },
+    async set(key, value) {
+      localStorage.setItem(key, value);
+      return { key, value };
+    },
+    async delete(key) {
+      localStorage.removeItem(key);
+      return { key, deleted: true };
+    },
+    async list(prefix) {
+      const keys = Object.keys(localStorage).filter((k) => !prefix || k.startsWith(prefix));
+      return { keys, prefix };
+    },
+  };
+}
+
+import React, { useState, useMemo, useEffect } from "react";
+import { createRoot } from "react-dom/client";
+import {
+  Search, Menu, X, GraduationCap, Layers, FlaskConical, Library,
+  Info, ChevronRight, ChevronLeft, Check, XCircle, RotateCcw,
+  FileText, Presentation, Video, BookMarked, ClipboardList, Link2,
+  Brain, Home as HomeIcon, ArrowRight, Quote, Compass, Sparkles,
+  Coins, Pencil, Save, Plus, Trash2
+} from "lucide-react";
+
+/* ============================================================
+   DATOS DE EJEMPLO
+   Todo el contenido marcado como "Contenido de ejemplo" es
+   provisional y debe reemplazarse por material real.
+   ============================================================ */
+
+const NOMBRE_PLATAFORMA = "Ágora";
+
+const NIVELES = {
+  "3° Medio": ["Filosofía", "Seminario de Filosofía", "Filosofía Estética", "Filosofía Política"],
+  "4° Medio": ["Filosofía Política", "Filosofía", "Filosofía Estética", "Seminario de Filosofía"],
+};
+
+// Curso completamente desarrollado como demostración
+const CURSO_DEMO_KEY = "4° Medio::Filosofía Política";
+
+const CURSOS_DETALLE = {
+  [CURSO_DEMO_KEY]: {
+    nivel: "4° Medio",
+    nombre: "Filosofía Política",
+    descripcion:
+      "Un recorrido por las grandes preguntas sobre el poder, la libertad y la justicia, desde la polis griega hasta los debates contemporáneos.",
+    unidades: [
+      {
+        id: "libertad",
+        nombre: "Libertad",
+        resumen: "¿Qué significa ser libre? Del libre albedrío a la autonomía moderna.",
+        temas: [
+          {
+            id: "la-ola",
+            nombre: "La Ola: obediencia y conformismo",
+            introduccion:
+              "A partir del caso histórico narrado en la película La Ola, exploramos cómo grupos enteros pueden renunciar a su libertad individual.",
+            objetivo: "Analizar las condiciones sociales y psicológicas que favorecen la pérdida de la autonomía personal en contextos grupales.",
+            conceptos: ["Libertad", "Autoridad", "Conformismo", "Autonomía"],
+            autores: ["kant", "foucault"],
+            contenido:
+              "Contenido de ejemplo: la unidad revisa el experimento social representado en La Ola y lo contrasta con los estudios de Milgram y Asch sobre obediencia, para preguntarnos qué mecanismos institucionales protegen —o erosionan— la libertad individual.",
+            preguntasReflexion: [
+              "¿Bajo qué condiciones estarías dispuesto a ceder parte de tu libertad individual a un grupo?",
+              "¿Es posible ser completamente autónomo dentro de una institución (colegio, trabajo, Estado)?",
+            ],
+          },
+          {
+            id: "autonomia-kantiana",
+            nombre: "Autonomía y el sujeto moderno",
+            introduccion: "Kant sostiene que la libertad no es hacer lo que se quiere, sino darse a sí mismo la propia ley.",
+            objetivo: "Comprender el concepto kantiano de autonomía y su relación con el imperativo categórico.",
+            conceptos: ["Autonomía", "Imperativo categórico", "Razón práctica"],
+            autores: ["kant"],
+            contenido:
+              "Contenido de ejemplo: se introduce la distinción kantiana entre heteronomía y autonomía, y se analiza el imperativo categórico como criterio racional de la acción moral.",
+            preguntasReflexion: ["¿Puede una acción ser libre si está determinada por una ley, aunque sea una ley que uno mismo se da?"],
+          },
+        ],
+      },
+      {
+        id: "justicia",
+        nombre: "Justicia",
+        resumen: "De la justicia como armonía en Platón a la justicia como equidad en Rawls.",
+        temas: [
+          {
+            id: "velo-ignorancia",
+            nombre: "El velo de la ignorancia",
+            introduccion: "John Rawls propone imaginar los principios de una sociedad justa desde una posición original de igualdad.",
+            objetivo: "Aplicar el experimento mental del velo de la ignorancia a problemas de justicia social contemporáneos.",
+            conceptos: ["Justicia", "Igualdad", "Contrato social"],
+            autores: ["rawls"],
+            contenido:
+              "Contenido de ejemplo: se presenta la 'posición original' y el 'velo de la ignorancia' como herramientas para pensar reglas sociales imparciales, y se discuten sus críticas comunitaristas.",
+            preguntasReflexion: ["Si no supieras qué lugar ocuparás en la sociedad, ¿qué reglas propondrías para repartir la riqueza?"],
+          },
+        ],
+      },
+      {
+        id: "poder",
+        nombre: "Poder y sociedad",
+        resumen: "Micropoderes, disciplina y vigilancia en la sociedad contemporánea.",
+        temas: [
+          {
+            id: "poder-disciplinario",
+            nombre: "Poder disciplinario",
+            introduccion: "Foucault desplaza la pregunta por el poder desde el Estado hacia las instituciones cotidianas.",
+            objetivo: "Reconocer mecanismos de poder disciplinario en instituciones como la escuela, la fábrica y la prisión.",
+            conceptos: ["Poder", "Disciplina", "Vigilancia"],
+            autores: ["foucault"],
+            contenido:
+              "Contenido de ejemplo: se revisa el análisis foucaultiano del panóptico como modelo de vigilancia y se lo compara con formas actuales de vigilancia digital.",
+            preguntasReflexion: ["¿Qué formas de vigilancia disciplinaria reconoces en tu propio colegio?"],
+          },
+        ],
+      },
+    ],
+  },
+};
+
+const RECURSOS = [
+  { id: 1, titulo: "Guía: El velo de la ignorancia", tipo: "guia", curso: "Filosofía Política", nivel: "4° Medio", unidad: "Justicia", tema: "velo-ignorancia", fecha: "2026-04-12", descripcion: "Guía de trabajo con preguntas sobre el experimento mental de Rawls." },
+  { id: 2, titulo: "Presentación: Autonomía kantiana", tipo: "presentacion", curso: "Filosofía Política", nivel: "4° Medio", unidad: "Libertad", tema: "autonomia-kantiana", fecha: "2026-04-03", descripcion: "PPT usado en clases sobre heteronomía y autonomía en Kant." },
+  { id: 3, titulo: "Video: La Ola, resumen y análisis", tipo: "video", curso: "Filosofía Política", nivel: "4° Medio", unidad: "Libertad", tema: "la-ola", fecha: "2026-03-28", descripcion: "Video introductorio sobre el caso narrado en la película." },
+  { id: 4, titulo: "Lectura: Fundamentación de la metafísica de las costumbres (fragmento)", tipo: "lectura", curso: "Filosofía Política", nivel: "4° Medio", unidad: "Libertad", tema: "autonomia-kantiana", fecha: "2026-04-05", descripcion: "Fragmento seleccionado de Kant sobre el imperativo categórico." },
+  { id: 5, titulo: "Actividad: Relacionar autor y concepto", tipo: "actividad", curso: "Filosofía Política", nivel: "4° Medio", unidad: "Poder", tema: "poder-disciplinario", fecha: "2026-04-18", descripcion: "Actividad interactiva de relación entre filósofos y conceptos clave." },
+  { id: 6, titulo: "Documento: Rúbrica de ensayo filosófico", tipo: "documento", curso: "Filosofía Política", nivel: "4° Medio", unidad: "Justicia", tema: "velo-ignorancia", fecha: "2026-04-10", descripcion: "Pauta de evaluación para el ensayo final de la unidad." },
+  { id: 7, titulo: "Recurso externo: Podcast sobre Foucault y el poder", tipo: "externo", curso: "Filosofía Política", nivel: "4° Medio", unidad: "Poder", tema: "poder-disciplinario", fecha: "2026-04-20", descripcion: "Enlace a un podcast recomendado sobre el panóptico digital." },
+  { id: 8, titulo: "Material de estudio: Mapa conceptual de la justicia", tipo: "estudio", curso: "Filosofía Política", nivel: "4° Medio", unidad: "Justicia", tema: "velo-ignorancia", fecha: "2026-04-11", descripcion: "Mapa conceptual para repasar antes de la evaluación." },
+];
+
+const TIPOS_RECURSO = {
+  guia: { label: "Guía", icon: FileText },
+  presentacion: { label: "Presentación", icon: Presentation },
+  video: { label: "Video", icon: Video },
+  lectura: { label: "Lectura", icon: BookMarked },
+  actividad: { label: "Actividad", icon: ClipboardList },
+  externo: { label: "Recurso externo", icon: Link2 },
+  documento: { label: "Documento", icon: FileText },
+  estudio: { label: "Material de estudio", icon: Brain },
+};
+
+const CONCEPTOS = ["Justicia", "Libertad", "Ética", "Verdad", "Conocimiento", "Política", "Poder", "Arte", "Belleza", "Moral", "Responsabilidad", "Existencia"];
+
+const AUTORES = [
+  {
+    id: "kant", nombre: "Immanuel Kant", epoca: "1724 – 1804", fleshed: true,
+    bio: "Contenido de ejemplo: filósofo prusiano considerado el punto de inflexión de la filosofía moderna, autor de las tres grandes Críticas.",
+    contexto: "Escribe en el contexto de la Ilustración europea, marcado por la confianza en la razón humana como guía de la vida individual y colectiva.",
+    obras: ["Crítica de la razón pura (1781)", "Fundamentación de la metafísica de las costumbres (1785)", "Crítica de la razón práctica (1788)"],
+    conceptos: ["Autonomía", "Imperativo categórico", "Razón práctica", "Deber"],
+    etica: "Propone una ética del deber (deontológica): una acción es moral si puede convertirse en ley universal, independiente de sus consecuencias.",
+    politica: "Defiende una paz perpetua basada en repúblicas gobernadas por leyes y en una federación de Estados libres.",
+    preguntas: ["¿Qué diferencia hay entre actuar por deber y actuar conforme al deber?", "¿Puede el imperativo categórico aplicarse a dilemas actuales, como la inteligencia artificial?"],
+  },
+  {
+    id: "socrates", nombre: "Sócrates", epoca: "470 – 399 a.C.", fleshed: true,
+    bio: "Contenido de ejemplo: filósofo ateniense que no dejó obra escrita; su pensamiento se conoce principalmente a través de los diálogos de Platón.",
+    contexto: "Vive en la Atenas democrática del siglo V a.C., ciudad que finalmente lo condena a muerte por 'corromper a la juventud'.",
+    obras: ["Conocido a través de los Diálogos de Platón", "Recuerdos de Sócrates de Jenofonte"],
+    conceptos: ["Mayéutica", "Ironía socrática", "Conócete a ti mismo"],
+    etica: "Sostiene que nadie hace el mal voluntariamente: el mal es fruto de la ignorancia, y el conocimiento conduce a la virtud.",
+    politica: "Defiende la obediencia a las leyes de la ciudad incluso cuando estas lo condenan, como se narra en el diálogo Critón.",
+    preguntas: ["¿Estás de acuerdo con que nadie hace el mal a propósito?", "¿Por qué Sócrates elige no escapar de la prisión?"],
+  },
+  {
+    id: "foucault", nombre: "Michel Foucault", epoca: "1926 – 1984", fleshed: true,
+    bio: "Contenido de ejemplo: filósofo francés que estudió las relaciones entre saber, poder e instituciones.",
+    contexto: "Escribe en la Francia de posguerra, en diálogo con el estructuralismo y la historia de las instituciones disciplinarias.",
+    obras: ["Vigilar y castigar (1975)", "Historia de la locura en la época clásica (1961)", "Historia de la sexualidad (1976)"],
+    conceptos: ["Poder disciplinario", "Panóptico", "Biopolítica"],
+    etica: "Cuestiona las nociones fijas de normalidad y desviación, mostrando cómo son producidas históricamente por relaciones de poder.",
+    politica: "Analiza el poder como una red difusa de relaciones que atraviesa todas las instituciones, más allá del Estado.",
+    preguntas: ["¿Qué instituciones de tu vida cotidiana ejercen un poder disciplinario sobre ti?", "¿Sigue vigente el modelo del panóptico en la era digital?"],
+  },
+  { id: "platon", nombre: "Platón", epoca: "427 – 347 a.C.", fleshed: false },
+  { id: "aristoteles", nombre: "Aristóteles", epoca: "384 – 322 a.C.", fleshed: false },
+  { id: "rawls", nombre: "John Rawls", epoca: "1921 – 2002", fleshed: false },
+  { id: "nietzsche", nombre: "Friedrich Nietzsche", epoca: "1844 – 1900", fleshed: false },
+  { id: "hegel", nombre: "Georg W. F. Hegel", epoca: "1770 – 1831", fleshed: false },
+  { id: "descartes", nombre: "René Descartes", epoca: "1596 – 1650", fleshed: false },
+  { id: "marx", nombre: "Karl Marx", epoca: "1818 – 1883", fleshed: false },
+  { id: "spinoza", nombre: "Baruch Spinoza", epoca: "1632 – 1677", fleshed: false },
+  { id: "heidegger", nombre: "Martin Heidegger", epoca: "1889 – 1976", fleshed: false },
+];
+
+const FLASHCARDS = [
+  { front: "¿Qué es el imperativo categórico?", back: "Contenido de ejemplo: para Kant, un mandato racional incondicionado que exige actuar solo según máximas que puedan convertirse en ley universal." },
+  { front: "¿Qué significa 'justicia como equidad' en Rawls?", back: "Contenido de ejemplo: una concepción de la justicia que se construye desde una posición original de igualdad, bajo un velo de ignorancia." },
+  { front: "¿Qué es el poder disciplinario en Foucault?", back: "Contenido de ejemplo: una forma de poder difusa que actúa sobre los cuerpos a través de instituciones como la escuela, la fábrica y la prisión." },
+  { front: "¿Qué propone la mayéutica socrática?", back: "Contenido de ejemplo: un método de diálogo que busca 'dar a luz' el conocimiento que ya está latente en la persona, mediante preguntas sucesivas." },
+  { front: "¿Qué diferencia hay entre heteronomía y autonomía?", back: "Contenido de ejemplo: la heteronomía es actuar según una ley impuesta desde afuera; la autonomía, según una ley que uno mismo se da racionalmente." },
+  { front: "¿Qué es el panóptico?", back: "Contenido de ejemplo: un diseño arquitectónico carcelario que permite vigilar sin ser visto, usado por Foucault como metáfora del poder disciplinario moderno." },
+];
+
+const AUTOEVALUACION = [
+  {
+    pregunta: "¿Qué entiende Kant por autonomía?",
+    opciones: [
+      "Hacer siempre lo que uno desea sin restricciones.",
+      "Darse a sí mismo una ley racional y actuar conforme a ella.",
+      "Obedecer las leyes del Estado sin cuestionarlas.",
+      "Seguir los deseos del grupo al que se pertenece.",
+    ],
+    correcta: 1,
+    explicacion: "Contenido de ejemplo: para Kant, la autonomía consiste en que la razón se dé a sí misma la ley moral, no en la ausencia total de reglas.",
+  },
+  {
+    pregunta: "Según Rawls, ¿qué función cumple el 'velo de la ignorancia'?",
+    opciones: [
+      "Ocultar la existencia de desigualdades sociales.",
+      "Impedir que las personas conozcan su futura posición social al diseñar principios de justicia.",
+      "Justificar la desigualdad económica.",
+      "Eliminar la necesidad de un contrato social.",
+    ],
+    correcta: 1,
+    explicacion: "Contenido de ejemplo: al no saber qué lugar ocuparán en la sociedad, las personas eligen principios más imparciales.",
+  },
+  {
+    pregunta: "¿Qué institución utiliza Foucault como modelo del poder disciplinario?",
+    opciones: ["La familia", "El panóptico / la prisión", "El mercado", "La Iglesia"],
+    correcta: 1,
+    explicacion: "Contenido de ejemplo: Foucault usa el diseño del panóptico carcelario como metáfora de la vigilancia disciplinaria moderna.",
+  },
+];
+
+const NAV_ITEMS = [
+  { key: "inicio", label: "Inicio", icon: HomeIcon },
+  { key: "cursos", label: "Mis cursos", icon: GraduationCap },
+  { key: "recursos", label: "Recursos", icon: Layers },
+  { key: "estudio", label: "Modo estudio", icon: Brain },
+  { key: "paes", label: "PAES", icon: FlaskConical },
+  { key: "biblioteca", label: "Biblioteca", icon: Library },
+  { key: "terrapesos", label: "Terrapesos", icon: Coins },
+  { key: "sobre", label: "Sobre la asignatura", icon: Info },
+];
+
+/* ------------------------------------------------------------
+   TERRAPESOS
+   Sistema de economía de aula, integrado desde el proyecto
+   "Terrapesos" (Colegio Quillota Terranova). Los datos se
+   guardan en el almacenamiento compartido del artefacto, para
+   que todos los estudiantes vean los mismos valores que fija
+   el profesor o profesora.
+   ------------------------------------------------------------ */
+
+const TERRAPESOS_STORAGE_KEY = "terrapesos-data-v1";
+
+// Clave simple para entrar a modo edición en Terrapesos (link publicado).
+// No es una medida de seguridad real: solo evita que estudiantes casuales
+// toquen los valores por accidente. Cámbiala aquí cuando quieras.
+const TERRAPESOS_EDIT_PIN = "1808";
+
+const TERRAPESOS_TIERS = {
+  d1000: { hex: "#8FAE5D", label: "1.000" },
+  d2000: { hex: "#9B7FD4", label: "2.000" },
+  d5000: { hex: "#D2695C", label: "5.000" },
+  d10000: { hex: "#5B9BC9", label: "10.000" },
+  d20000: { hex: "#E4C158", label: "20.000" },
+};
+
+const TERRAPESOS_DEFAULT = {
+  individual: [
+    { tier: "d2000", label: "Salir a dar una vuelta por el colegio", note: "Una vez", price: "3.000" },
+    { tier: "d5000", label: "Elegir tu playlist al realizar una actividad", note: "Solo cuando se amerite", price: "4.000" },
+    { tier: "d5000", label: "Elegir el tema de una actividad", note: "cuando la actividad lo permita", price: "6.000" },
+    { tier: "d5000", label: "Comodín tarea.", note: "Eliminar una pregunta de la actividad de la clase", price: "8.000" },
+    { tier: "d5000", label: "Comodín trabajo en parejas", note: "Permite realizar una actividad individual en pareja.", price: "8.000" },
+    { tier: "d10000", label: "Postergar la entrega de un trabajo o cuaderno", note: "24 horas, máximo una vez por trabajo", price: "10.000" },
+    { tier: "d10000", label: "+5 décimas en una prueba", note: "", price: "15.000" },
+  ],
+  grupo: [
+    { tier: "d10000", label: "Música de fondo durante una clase completa", note: "", price: "12.000" },
+    { tier: "d10000", label: "Minuto feliz: 1 minuto de cuaderno en la prueba", note: "ideal para juntar entre 3 a 5 estudiantes", price: "15.000" },
+    { tier: "d20000", label: "Minuto feliz: 3 minutos de cuaderno en la prueba", note: "ideal para juntar entre 6 a 10 estudiantes", price: "30.000" },
+    { tier: "d20000", label: "Cambiar la fecha de una prueba", note: "para todo el curso, se junta entre todos solo si es permitido", price: "60.000" },
+  ],
+  g1: {
+    titulo: "Momento destacado en clase",
+    frecuencia: "",
+    tier: "d1000",
+    items: [
+      { label: "La mejor respuesta o idea de la clase", note: "máximo 1 a 2 por clase, a criterio del profesor/a", price: "1.000" },
+      { label: "Encargado/a de ordenar la sala", note: "rotativo, un estudiante distinto cada vez", price: "1.000" },
+      { label: "Pregunta aleatoria.", note: "", price: "1.000" },
+    ],
+  },
+  g2: {
+    titulo: "Logro semanal",
+    frecuencia: "se revisa al cierre de la semana",
+    tier: "d2000",
+    items: [
+      { label: "Cumplir con todas las actividades semanales", note: "sorteo entre quienes cumplieron: 2 a 3 ganadores", price: "2.000" },
+      { label: "Proponer una buena idea o solución", note: "solo quienes no fallaron ningún día", price: "2.000" },
+      { label: "Participación en clases", note: "1 grupo ganador", price: "3.000" },
+      { label: "Ayudar a un compañero o compañera", note: "caso puntual que note el profesor/a", price: "2.000" },
+    ],
+  },
+  g3: {
+    titulo: "Logro destacado",
+    frecuencia: "ocasional",
+    tier: "d5000",
+    items: [
+      { label: "Momento destacado", note: "Reconocimiento por una situación puntual que haya generado un impacto positivo al curso", price: "5.000" },
+      { label: "Liderazgo y orden.", note: "Reconocimiento por aporte al orden y al buen clima del aula.", price: "5.000" },
+      { label: "Mejor nota del curso en una prueba", note: "1 estudiante por prueba. Al azar", price: "5.000" },
+    ],
+  },
+  g4: {
+    titulo: "Reconocimiento mayor",
+    frecuencia: "mensual, pocos lo logran",
+    tier: "d10000",
+    items: [
+      { label: "Comportamiento ejemplar durante todo el mes, sin anotaciones", note: "", price: "10.000" },
+    ],
+  },
+  multas: [
+    { label: "3 anotaciones en el libro de clases", note: "se descuenta al llegar a la tercera", price: "-1.000" },
+    { label: "Falta de respeto a un compañero/a o al profesor/a", note: "", price: "-2.000" },
+    { label: "No cumplir con un trabajo grupal acordado", note: "", price: "-1.000" },
+    { label: "Uso de dispositivo electrónico no autorizado", note: "", price: "-2.000" },
+    { label: "Copia o plagio en una evaluación", note: "", price: "-5.000" },
+  ],
+  exampleText: "8.000 terrapesos → Comodín tarea. Como el billete más chico es de 1.000, cada beneficio realmente cuesta juntar varias buenas acciones.",
+  importantText: "Los terrapesos no se entregan a todo el curso por cumplir lo mínimo: son limitados a propósito, para que mantengan su valor. Se premia lo que destaca, no lo que se espera de todos.",
+  funcionaText: "El profesor o profesora entrega el terrapeso en el momento, o anota y entrega al cierre de la semana. Los cupos y sorteos evitan que se entreguen demasiados terrapesos a la vez, así el sistema se mantiene sostenible durante todo el año.",
+  multasImportantText: "Las multas se descuentan de los terrapesos ya acumulados. Si no alcanzan, se anota como deuda y se descuenta de la próxima entrega. El objetivo no es castigar, sino hacer notoria la relación entre las conductas y sus consecuencias.",
+};
+
+/* ============================================================
+   ESTILOS
+   ============================================================ */
+
+const STYLES = `
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+
+.pf-app {
+  --ink: #14151F;
+  --ink-2: #1C1E2C;
+  --ink-3: #262939;
+  --border: #333650;
+  --paper: #EDE6D6;
+  --gold: #C9A227;
+  --gold-soft: #E4C158;
+  --teal: #5C8880;
+  --text: #F1EEE4;
+  --text-muted: #A6A8BE;
+  font-family: 'IBM Plex Sans', sans-serif;
+  background: var(--ink);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.5;
+}
+.pf-app * { box-sizing: border-box; }
+.pf-serif { font-family: 'Fraunces', serif; }
+.pf-container { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+
+/* NAV */
+.pf-nav { position: sticky; top: 0; z-index: 40; background: rgba(20,21,31,0.92); backdrop-filter: blur(8px); border-bottom: 1px solid var(--border); }
+.pf-nav-inner { display: flex; align-items: center; justify-content: space-between; height: 68px; }
+.pf-logo { display: flex; align-items: center; gap: 10px; cursor: pointer; background: none; border: none; }
+.pf-logo-mark { width: 34px; height: 34px; border-radius: 8px; background: linear-gradient(155deg, var(--gold-soft), var(--gold)); display: flex; align-items: center; justify-content: center; color: var(--ink); font-weight: 700; font-family: 'Fraunces', serif; font-size: 18px; }
+.pf-logo-text { text-align: left; }
+.pf-logo-name { font-family: 'Fraunces', serif; font-size: 19px; font-weight: 600; letter-spacing: 0.2px; color: var(--text); }
+.pf-logo-sub { font-size: 11.5px; color: var(--text-muted); margin-top: -2px; }
+.pf-nav-links { display: none; gap: 4px; }
+.pf-nav-link { display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 7px; border: none; background: none; color: var(--text-muted); font-size: 14px; cursor: pointer; font-family: inherit; white-space: nowrap; transition: color .15s, background .15s; }
+.pf-nav-link:hover { color: var(--text); background: var(--ink-3); }
+.pf-nav-link.active { color: var(--ink); background: var(--gold-soft); font-weight: 600; }
+.pf-nav-right { display: flex; align-items: center; gap: 8px; }
+.pf-search-btn { display: flex; align-items: center; gap: 8px; border: 1px solid var(--border); background: var(--ink-2); color: var(--text-muted); padding: 7px 12px; border-radius: 8px; cursor: pointer; font-size: 13.5px; font-family: inherit; }
+.pf-search-btn:hover { border-color: var(--gold); color: var(--text); }
+.pf-menu-btn { display: flex; background: none; border: none; color: var(--text); cursor: pointer; padding: 6px; }
+@media (min-width: 900px) {
+  .pf-nav-links { display: flex; }
+  .pf-menu-btn { display: none; }
+}
+.pf-mobile-menu { border-top: 1px solid var(--border); background: var(--ink-2); }
+.pf-mobile-menu .pf-nav-link { width: 100%; justify-content: flex-start; padding: 13px 24px; border-radius: 0; }
+
+/* SEARCH OVERLAY */
+.pf-search-overlay { position: fixed; inset: 0; background: rgba(10,10,16,0.72); z-index: 60; display: flex; align-items: flex-start; justify-content: center; padding: 80px 20px; }
+.pf-search-panel { background: var(--ink-2); border: 1px solid var(--border); border-radius: 14px; width: 100%; max-width: 640px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+.pf-search-input-row { display: flex; align-items: center; gap: 10px; padding: 16px 18px; border-bottom: 1px solid var(--border); }
+.pf-search-input-row input { flex: 1; background: none; border: none; outline: none; color: var(--text); font-size: 16px; font-family: inherit; }
+.pf-search-input-row input::placeholder { color: var(--text-muted); }
+
+/* HERO */
+.pf-hero { padding: 64px 0 56px; border-bottom: 1px solid var(--border); }
+.pf-eyebrow { display: inline-flex; align-items: center; gap: 8px; color: var(--gold-soft); font-size: 13.5px; margin-bottom: 18px; }
+.pf-hero h1 { font-family: 'Fraunces', serif; font-weight: 600; font-size: clamp(32px, 5vw, 52px); line-height: 1.08; max-width: 780px; margin: 0 0 20px; letter-spacing: -0.5px; }
+.pf-hero p.pf-lede { font-size: 17px; color: var(--text-muted); max-width: 560px; margin: 0 0 30px; }
+.pf-btn-row { display: flex; gap: 12px; flex-wrap: wrap; }
+.pf-btn { font-family: inherit; font-size: 14.5px; font-weight: 600; padding: 12px 20px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; border: 1px solid transparent; transition: transform .12s, filter .12s; }
+.pf-btn:hover { filter: brightness(1.08); }
+.pf-btn:active { transform: translateY(1px); }
+.pf-btn-primary { background: var(--gold-soft); color: var(--ink); }
+.pf-btn-secondary { background: none; border-color: var(--border); color: var(--text); }
+.pf-btn-secondary:hover { border-color: var(--gold); }
+
+/* SECTION */
+.pf-section { padding: 56px 0; border-bottom: 1px solid var(--border); }
+.pf-section:last-child { border-bottom: none; }
+.pf-section-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 28px; gap: 16px; flex-wrap: wrap; }
+.pf-section-head h2 { font-family: 'Fraunces', serif; font-size: 27px; font-weight: 600; margin: 0; }
+.pf-section-head p { color: var(--text-muted); font-size: 14.5px; margin: 6px 0 0; }
+.pf-link-more { color: var(--gold-soft); font-size: 13.5px; display: flex; align-items: center; gap: 4px; background: none; border: none; cursor: pointer; font-family: inherit; white-space: nowrap; }
+
+/* GRID + CARDS */
+.pf-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+.pf-grid-2 { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+.pf-card { background: var(--ink-2); border: 1px solid var(--border); border-radius: 12px; padding: 20px; cursor: pointer; text-align: left; transition: border-color .15s, transform .15s; font-family: inherit; color: var(--text); }
+.pf-card:hover { border-color: var(--gold); transform: translateY(-2px); }
+.pf-card.disabled { opacity: 0.55; cursor: default; }
+.pf-card.disabled:hover { border-color: var(--border); transform: none; }
+.pf-card h3 { font-family: 'Fraunces', serif; font-size: 17.5px; font-weight: 600; margin: 0 0 6px; }
+.pf-card p { font-size: 13.5px; color: var(--text-muted); margin: 0; }
+.pf-tag { display: inline-block; font-size: 11px; padding: 3px 9px; border-radius: 20px; background: var(--ink-3); color: var(--gold-soft); border: 1px solid var(--border); margin-bottom: 10px; letter-spacing: 0.2px; }
+.pf-tag.teal { color: var(--teal); }
+
+/* TABS */
+.pf-tabs { display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 1px solid var(--border); }
+.pf-tab { background: none; border: none; color: var(--text-muted); padding: 10px 4px; margin-right: 22px; font-size: 15px; font-family: inherit; cursor: pointer; border-bottom: 2px solid transparent; }
+.pf-tab.active { color: var(--text); border-color: var(--gold); font-weight: 600; }
+
+/* BREADCRUMB */
+.pf-breadcrumb { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; font-size: 13px; color: var(--text-muted); margin-bottom: 22px; }
+.pf-breadcrumb button { background: none; border: none; color: var(--text-muted); cursor: pointer; font-family: inherit; font-size: 13px; padding: 2px 0; }
+.pf-breadcrumb button:hover { color: var(--gold-soft); }
+.pf-breadcrumb .current { color: var(--text); }
+
+/* PROCESS DIAGRAM */
+.pf-process { display: flex; align-items: stretch; gap: 0; overflow-x: auto; padding-bottom: 4px; }
+.pf-process-step { flex: 1; min-width: 150px; background: var(--ink-2); border: 1px solid var(--border); padding: 18px 16px; position: relative; }
+.pf-process-step:first-child { border-radius: 10px 0 0 10px; }
+.pf-process-step:last-child { border-radius: 0 10px 10px 0; }
+.pf-process-step + .pf-process-step { border-left: none; }
+.pf-process-num { font-family: 'Fraunces', serif; font-size: 13px; color: var(--gold-soft); margin-bottom: 8px; }
+.pf-process-step h4 { margin: 0 0 4px; font-size: 14.5px; font-weight: 600; }
+.pf-process-step p { margin: 0; font-size: 12.5px; color: var(--text-muted); }
+
+/* TOPIC DETAIL */
+.pf-topic-block { margin-bottom: 30px; }
+.pf-topic-block h3 { font-family: 'Fraunces', serif; font-size: 18px; margin: 0 0 10px; }
+.pf-topic-block p, .pf-topic-block li { font-size: 14.5px; color: var(--text-muted); line-height: 1.65; }
+.pf-chip-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.pf-chip { font-size: 12.5px; padding: 5px 12px; border-radius: 20px; background: var(--ink-3); border: 1px solid var(--border); color: var(--text); }
+.pf-resource-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--ink-2); border: 1px solid var(--border); border-radius: 9px; margin-bottom: 8px; }
+.pf-resource-row .ico { color: var(--gold-soft); flex-shrink: 0; }
+.pf-resource-row .meta { font-size: 12px; color: var(--text-muted); }
+
+/* FILTER BAR */
+.pf-filter-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 26px; align-items: center; }
+.pf-select, .pf-input { background: var(--ink-2); border: 1px solid var(--border); color: var(--text); padding: 9px 12px; border-radius: 8px; font-size: 13.5px; font-family: inherit; }
+.pf-input { flex: 1; min-width: 200px; }
+
+/* FLASHCARD */
+.pf-flashcard-wrap { display: flex; flex-direction: column; align-items: center; gap: 20px; padding: 20px 0 10px; }
+.pf-flashcard { width: 100%; max-width: 520px; min-height: 220px; background: var(--ink-2); border: 1px solid var(--border); border-radius: 16px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 32px; cursor: pointer; position: relative; }
+.pf-flashcard:hover { border-color: var(--gold); }
+.pf-flashcard .face-label { position: absolute; top: 16px; left: 20px; font-size: 11px; letter-spacing: 0.5px; color: var(--gold-soft); }
+.pf-flashcard .txt { font-family: 'Fraunces', serif; font-size: 19px; line-height: 1.5; }
+.pf-flashcard.back .txt { font-family: 'IBM Plex Sans', sans-serif; font-size: 15.5px; color: var(--text-muted); }
+.pf-flash-controls { display: flex; align-items: center; gap: 16px; }
+.pf-icon-btn { background: var(--ink-2); border: 1px solid var(--border); color: var(--text); width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.pf-icon-btn:hover { border-color: var(--gold); }
+.pf-flash-counter { font-size: 13px; color: var(--text-muted); min-width: 56px; text-align: center; }
+
+/* QUIZ */
+.pf-quiz-q { font-family: 'Fraunces', serif; font-size: 17.5px; margin: 0 0 16px; }
+.pf-quiz-opt { display: block; width: 100%; text-align: left; background: var(--ink-2); border: 1px solid var(--border); color: var(--text); padding: 12px 14px; border-radius: 9px; margin-bottom: 9px; cursor: pointer; font-family: inherit; font-size: 14px; }
+.pf-quiz-opt:hover { border-color: var(--gold); }
+.pf-quiz-opt.correct { border-color: #6FAE8F; background: rgba(111,174,143,0.14); }
+.pf-quiz-opt.incorrect { border-color: #C9695F; background: rgba(201,105,95,0.14); }
+.pf-quiz-fb { display: flex; gap: 10px; align-items: flex-start; padding: 14px; border-radius: 9px; background: var(--ink-3); margin-top: 12px; font-size: 13.5px; color: var(--text-muted); }
+
+/* AUTHOR */
+.pf-author-hero { display: flex; align-items: flex-end; gap: 18px; margin-bottom: 30px; }
+.pf-author-avatar { width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(155deg, var(--teal), var(--ink-3)); display: flex; align-items: center; justify-content: center; font-family: 'Fraunces', serif; font-size: 24px; color: var(--text); flex-shrink: 0; }
+
+/* MISC */
+.pf-muted { color: var(--text-muted); }
+.pf-empty { text-align: center; padding: 50px 20px; color: var(--text-muted); }
+.pf-progress-track { width: 100%; height: 8px; border-radius: 6px; background: var(--ink-3); overflow: hidden; margin: 6px 0 4px; }
+.pf-progress-fill { height: 100%; background: linear-gradient(90deg, var(--teal), var(--gold-soft)); border-radius: 6px; }
+textarea.pf-reflection { width: 100%; background: var(--ink-2); border: 1px solid var(--border); color: var(--text); border-radius: 9px; padding: 12px; font-family: inherit; font-size: 14px; min-height: 90px; resize: vertical; }
+.pf-quote-block { display: flex; gap: 14px; padding: 22px 24px; background: var(--ink-2); border: 1px solid var(--border); border-left: 3px solid var(--gold); border-radius: 4px; }
+.pf-quote-block p { font-family: 'Fraunces', serif; font-size: 17px; font-style: italic; margin: 0; color: var(--text); }
+footer.pf-footer { padding: 30px 0; text-align: center; color: var(--text-muted); font-size: 12.5px; }
+
+/* TERRAPESOS */
+.pf-tp-toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 26px; }
+.pf-tp-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+@media (max-width: 720px) { .pf-tp-columns { grid-template-columns: 1fr; } }
+.pf-tp-col-title { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 600; margin: 0 0 3px; }
+.pf-tp-col-desc { font-size: 12.5px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.45; }
+.pf-tp-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.pf-tp-item:last-of-type { border-bottom: none; }
+.pf-tp-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+.pf-tp-body { flex: 1; min-width: 0; }
+.pf-tp-label { font-size: 14.5px; line-height: 1.35; }
+.pf-tp-note { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
+.pf-tp-price { font-family: 'Fraunces', serif; font-weight: 600; font-size: 15.5px; white-space: nowrap; min-width: 56px; text-align: right; color: var(--gold-soft); }
+.pf-tp-edit-input { background: var(--ink-3); border: 1px dashed var(--border); border-radius: 5px; color: var(--text); font-family: inherit; padding: 4px 7px; font-size: 13px; width: 100%; }
+.pf-tp-edit-input.price { text-align: right; width: 70px; }
+.pf-tp-remove { background: none; border: none; color: #C9695F; font-size: 18px; line-height: 1; padding: 2px 4px; cursor: pointer; flex-shrink: 0; }
+.pf-tp-add-row { font-size: 12.5px; color: var(--gold-soft); background: none; border: 1px dashed var(--gold-soft); border-radius: 6px; padding: 7px 12px; margin-top: 10px; cursor: pointer; font-family: inherit; }
+.pf-tp-legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 16px; font-size: 11.5px; color: var(--text-muted); }
+.pf-tp-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.pf-tp-group { margin-bottom: 22px; }
+.pf-tp-group:last-child { margin-bottom: 0; }
+.pf-tp-group-title { font-size: 15.5px; font-weight: 600; display: flex; align-items: center; gap: 8px; margin-bottom: 2px; font-family: 'Fraunces', serif; }
+.pf-tp-group-freq { font-family: 'IBM Plex Sans', sans-serif; font-weight: 400; font-size: 11.5px; color: var(--text-muted); }
+.pf-tp-callout-text { font-size: 13.5px; line-height: 1.55; color: var(--text); }
+.pf-quote-block.warn { border-left-color: #C9695F; background: rgba(201,105,95,0.08); }
+.pf-tp-item.danger .pf-tp-price { color: #D2695C; }
+.pf-tp-item.danger { border-bottom-color: rgba(201,105,95,0.2); }
+`;
+
+/* ============================================================
+   COMPONENTES AUXILIARES
+   ============================================================ */
+
+function Breadcrumb({ items }) {
+  return (
+    <div className="pf-breadcrumb">
+      {items.map((it, i) => (
+        <React.Fragment key={i}>
+          {i > 0 && <ChevronRight size={13} />}
+          {it.onClick ? (
+            <button onClick={it.onClick}>{it.label}</button>
+          ) : (
+            <span className="current">{it.label}</span>
+          )}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
+
+function ResourceRow({ r, onOpen }) {
+  const meta = TIPOS_RECURSO[r.tipo] || TIPOS_RECURSO.documento;
+  const Ico = meta.icon;
+  return (
+    <div className="pf-resource-row">
+      <Ico size={18} className="ico" />
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: 14, fontWeight: 500 }}>{r.titulo}</div>
+        <div className="meta">{meta.label} · {r.curso} · {r.unidad}</div>
+      </div>
+      <button className="pf-btn pf-btn-secondary" style={{ padding: "7px 14px", fontSize: 13 }} onClick={() => onOpen(r)}>
+        Abrir
+      </button>
+    </div>
+  );
+}
+
+/* ============================================================
+   APP PRINCIPAL
+   ============================================================ */
+
+function PlataformaFilosofia() {
+  const [view, setView] = useState({ page: "home" });
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [resourceFilters, setResourceFilters] = useState({ tipo: "todos", texto: "" });
+  const [nivelTab, setNivelTab] = useState("4° Medio");
+  const [flashIndex, setFlashIndex] = useState(0);
+  const [flashFlipped, setFlashFlipped] = useState(false);
+  const [quizAnswers, setQuizAnswers] = useState({});
+  const [toast, setToast] = useState(null);
+
+  // ---- Terrapesos: estado y persistencia compartida ----
+  const [tpData, setTpData] = useState(TERRAPESOS_DEFAULT);
+  const [tpLoaded, setTpLoaded] = useState(false);
+  const [tpTab, setTpTab] = useState("cambio");
+  const [tpEditing, setTpEditing] = useState(false);
+  const [tpSnapshot, setTpSnapshot] = useState(null);
+  const [tpAskingPin, setTpAskingPin] = useState(false);
+  const [tpPinInput, setTpPinInput] = useState("");
+  const [tpPinError, setTpPinError] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await window.storage.get(TERRAPESOS_STORAGE_KEY, true);
+        if (res && res.value) {
+          const saved = JSON.parse(res.value);
+          // Si hay datos guardados de una versión anterior (por ejemplo, sin la
+          // sección "multas"), se completa con los valores por defecto en vez
+          // de dejar propiedades faltantes que rompan el resto de la pantalla.
+          const merged = { ...TERRAPESOS_DEFAULT, ...saved };
+          setTpData(merged);
+        }
+      } catch (e) {
+        // sin datos guardados todavía: se usan los valores por defecto
+      } finally {
+        setTpLoaded(true);
+      }
+    })();
+  }, []);
+
+  const tpRequestEdit = () => {
+    setTpPinInput("");
+    setTpPinError(false);
+    setTpAskingPin(true);
+  };
+  const tpConfirmPin = () => {
+    if (tpPinInput === TERRAPESOS_EDIT_PIN) {
+      setTpAskingPin(false);
+      tpStartEdit();
+    } else {
+      setTpPinError(true);
+    }
+  };
+  const tpStartEdit = () => {
+    setTpSnapshot(JSON.parse(JSON.stringify(tpData)));
+    setTpEditing(true);
+  };
+  const tpCancelEdit = () => {
+    setTpData(tpSnapshot);
+    setTpEditing(false);
+  };
+  const tpSave = async () => {
+    setTpEditing(false);
+    try {
+      await window.storage.set(TERRAPESOS_STORAGE_KEY, JSON.stringify(tpData), true);
+      setToast("Cambios de Terrapesos guardados ✓ (solo en este navegador)");
+    } catch (e) {
+      setToast("No se pudo guardar. Intenta nuevamente.");
+    }
+  };
+  const tpReset = async () => {
+    setTpData(TERRAPESOS_DEFAULT);
+    setTpEditing(false);
+    try {
+      await window.storage.set(TERRAPESOS_STORAGE_KEY, JSON.stringify(TERRAPESOS_DEFAULT), true);
+      setToast("Valores de Terrapesos restablecidos");
+    } catch (e) {}
+  };
+
+  const tpUpdateListItem = (listKey, index, field, value) => {
+    setTpData((d) => {
+      const next = { ...d, [listKey]: [...d[listKey]] };
+      next[listKey][index] = { ...next[listKey][index], [field]: value };
+      return next;
+    });
+  };
+  const tpAddListItem = (listKey, withTier, preset) => {
+    setTpData((d) => ({
+      ...d,
+      [listKey]: [...d[listKey], preset || (withTier ? { tier: "d1000", label: "Nuevo beneficio", note: "", price: "1.000" } : { label: "Nuevo beneficio", note: "", price: "1.000" })],
+    }));
+  };
+  const tpRemoveListItem = (listKey, index) => {
+    setTpData((d) => ({ ...d, [listKey]: d[listKey].filter((_, i) => i !== index) }));
+  };
+
+  const tpUpdateGroupItem = (groupKey, index, field, value) => {
+    setTpData((d) => {
+      const group = { ...d[groupKey], items: [...d[groupKey].items] };
+      group.items[index] = { ...group.items[index], [field]: value };
+      return { ...d, [groupKey]: group };
+    });
+  };
+  const tpAddGroupItem = (groupKey) => {
+    setTpData((d) => {
+      const group = { ...d[groupKey], items: [...d[groupKey].items, { label: "Nueva actividad", note: "", price: "1.000" }] };
+      return { ...d, [groupKey]: group };
+    });
+  };
+  const tpRemoveGroupItem = (groupKey, index) => {
+    setTpData((d) => {
+      const group = { ...d[groupKey], items: d[groupKey].items.filter((_, i) => i !== index) };
+      return { ...d, [groupKey]: group };
+    });
+  };
+
+  const nav = (page, params = {}) => {
+    setView({ page, ...params });
+    setMobileOpen(false);
+    setSearchOpen(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const runSearch = (q) => {
+    setQuery(q);
+    nav("busqueda", { q });
+  };
+
+  const searchResults = useMemo(() => {
+    const q = (view.q || "").toLowerCase().trim();
+    if (!q) return { recursos: [], autores: [], conceptos: [] };
+    return {
+      recursos: RECURSOS.filter((r) => (r.titulo + r.descripcion + r.curso + r.unidad).toLowerCase().includes(q)),
+      autores: AUTORES.filter((a) => a.nombre.toLowerCase().includes(q)),
+      conceptos: CONCEPTOS.filter((c) => c.toLowerCase().includes(q)),
+    };
+  }, [view.q]);
+
+  const filteredResources = useMemo(() => {
+    return RECURSOS.filter((r) => {
+      const okTipo = resourceFilters.tipo === "todos" || r.tipo === resourceFilters.tipo;
+      const okTexto = !resourceFilters.texto || (r.titulo + r.descripcion).toLowerCase().includes(resourceFilters.texto.toLowerCase());
+      return okTipo && okTexto;
+    });
+  }, [resourceFilters]);
+
+  /* ---------- NAV ---------- */
+
+  const Nav = () => (
+    <nav className="pf-nav">
+      <div className="pf-container pf-nav-inner">
+        <button className="pf-logo" onClick={() => nav("home")}>
+          <div className="pf-logo-mark">Α</div>
+          <div className="pf-logo-text">
+            <div className="pf-logo-name">{NOMBRE_PLATAFORMA}</div>
+            <div className="pf-logo-sub">Filosofía · Aprender, cuestionar, argumentar</div>
+          </div>
+        </button>
+        <div className="pf-nav-links">
+          {NAV_ITEMS.map((it) => (
+            <button key={it.key} className={"pf-nav-link" + (view.page === it.key || (it.key === "cursos" && ["curso", "unidad", "tema"].includes(view.page)) ? " active" : "")} onClick={() => nav(it.key)}>
+              {it.label}
+            </button>
+          ))}
+        </div>
+        <div className="pf-nav-right">
+          <button className="pf-search-btn" onClick={() => setSearchOpen(true)}>
+            <Search size={15} /> <span style={{ display: window.innerWidth < 480 ? "none" : "inline" }}>Buscar…</span>
+          </button>
+          <button className="pf-menu-btn" onClick={() => setMobileOpen((v) => !v)}>
+            {mobileOpen ? <X size={22} /> : <Menu size={22} />}
+          </button>
+        </div>
+      </div>
+      {mobileOpen && (
+        <div className="pf-mobile-menu">
+          {NAV_ITEMS.map((it) => (
+            <button key={it.key} className={"pf-nav-link" + (view.page === it.key ? " active" : "")} onClick={() => nav(it.key)}>
+              <it.icon size={16} /> {it.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </nav>
+  );
+
+  const SearchOverlay = () => {
+    const [local, setLocal] = useState("");
+    if (!searchOpen) return null;
+    return (
+      <div className="pf-search-overlay" onClick={() => setSearchOpen(false)}>
+        <div className="pf-search-panel" onClick={(e) => e.stopPropagation()}>
+          <div className="pf-search-input-row">
+            <Search size={17} color="#A6A8BE" />
+            <input
+              autoFocus
+              placeholder='Busca un autor, concepto o recurso, ej. "Kant" o "libertad"'
+              value={local}
+              onChange={(e) => setLocal(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && local.trim() && runSearch(local)}
+            />
+            <X size={18} style={{ cursor: "pointer", color: "#A6A8BE" }} onClick={() => setSearchOpen(false)} />
+          </div>
+          <div style={{ padding: "12px 18px 18px", fontSize: 12.5, color: "#A6A8BE" }}>
+            Presiona Enter para ver todos los resultados de <strong style={{ color: "#F1EEE4" }}>{local || "…"}</strong>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  /* ---------- PÁGINAS ---------- */
+
+  const Home = () => (
+    <>
+      <div className="pf-hero pf-container">
+        <div className="pf-eyebrow"><Compass size={14} /> Bienvenido a {NOMBRE_PLATAFORMA}</div>
+        <h1 className="pf-serif">Aprender filosofía es aprender a hacer buenas preguntas.</h1>
+        <p className="pf-lede">Tu espacio de estudio para Filosofía: contenidos, guías, lecturas, actividades y preparación de evaluaciones, todo en un solo lugar.</p>
+        <div className="pf-btn-row">
+          <button className="pf-btn pf-btn-primary" onClick={() => nav("cursos")}>Ir a mis cursos <ArrowRight size={16} /></button>
+          <button className="pf-btn pf-btn-secondary" onClick={() => nav("estudio")}>Entrar a modo estudio</button>
+        </div>
+      </div>
+
+      <div className="pf-container pf-section">
+        <div className="pf-section-head">
+          <div>
+            <h2>Explora la plataforma</h2>
+            <p>Cuatro formas de acercarte a los contenidos de la asignatura.</p>
+          </div>
+        </div>
+        <div className="pf-grid-2">
+          {[
+            { key: "cursos", icon: GraduationCap, title: "Mis cursos", desc: "Revisa tus asignaturas por nivel: unidades, temas y objetivos de aprendizaje." },
+            { key: "recursos", icon: Layers, title: "Recursos", desc: "Guías, presentaciones, videos y lecturas organizadas y filtrables." },
+            { key: "estudio", icon: Brain, title: "Modo estudio", desc: "Resúmenes, flashcards y autoevaluaciones para prepararte antes de una prueba." },
+            { key: "biblioteca", icon: Library, title: "Biblioteca filosófica", desc: "Autores y conceptos clave, con su contexto histórico y preguntas para pensar." },
+          ].map((c) => (
+            <button key={c.key} className="pf-card" onClick={() => nav(c.key)}>
+              <c.icon size={20} color="#E4C158" style={{ marginBottom: 10 }} />
+              <h3>{c.title}</h3>
+              <p>{c.desc}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="pf-container pf-section">
+        <div className="pf-section-head">
+          <div>
+            <h2>Cómo se estudia aquí</h2>
+            <p>Un mismo recorrido para cada tema de la asignatura.</p>
+          </div>
+        </div>
+        <div className="pf-process">
+          {[
+            { n: "1", t: "Contenido", d: "Revisas la introducción, los conceptos y el material de la clase." },
+            { n: "2", t: "Estudio", d: "Repasas con resúmenes, flashcards y preguntas guía." },
+            { n: "3", t: "Práctica", d: "Resuelves actividades de alternativas, relación y reflexión." },
+            { n: "4", t: "Evaluación", d: "Rindes la evaluación de la unidad con lo trabajado." },
+            { n: "5", t: "Retroalimentación", d: "Recibes explicación de tus respuestas y qué reforzar." },
+          ].map((s) => (
+            <div className="pf-process-step" key={s.n}>
+              <div className="pf-process-num">{s.n}</div>
+              <h4>{s.t}</h4>
+              <p>{s.d}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="pf-container pf-section">
+        <div className="pf-quote-block">
+          <Quote size={22} color="#C9A227" style={{ flexShrink: 0, marginTop: 2 }} />
+          <p>Una vida sin examen no merece la pena ser vivida.</p>
+        </div>
+      </div>
+    </>
+  );
+
+  const Cursos = () => {
+    const cursosNivel = NIVELES[nivelTab];
+    return (
+      <div className="pf-container pf-section" style={{ paddingTop: 44 }}>
+        <div className="pf-section-head">
+          <div>
+            <h2>Mis cursos</h2>
+            <p>Selecciona tu nivel y luego tu asignatura para ver las unidades disponibles.</p>
+          </div>
+        </div>
+        <div className="pf-tabs">
+          {Object.keys(NIVELES).map((n) => (
+            <button key={n} className={"pf-tab" + (nivelTab === n ? " active" : "")} onClick={() => setNivelTab(n)}>{n}</button>
+          ))}
+        </div>
+        <div className="pf-grid-2">
+          {cursosNivel.map((c) => {
+            const key = `${nivelTab}::${c}`;
+            const hasDetalle = !!CURSOS_DETALLE[key];
+            return (
+              <button key={c} className={"pf-card" + (hasDetalle ? "" : " disabled")} onClick={() => hasDetalle && nav("curso", { cursoKey: key })}>
+                <span className="pf-tag">{nivelTab}</span>
+                <h3>{c}</h3>
+                <p>{hasDetalle ? CURSOS_DETALLE[key].descripcion : "Próximamente: aún no se han cargado unidades para este curso."}</p>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  const CursoDetalle = () => {
+    const curso = CURSOS_DETALLE[view.cursoKey];
+    if (!curso) return <Empty text="Este curso todavía no tiene contenido." onBack={() => nav("cursos")} />;
+    return (
+      <div className="pf-container pf-section" style={{ paddingTop: 44 }}>
+        <Breadcrumb items={[{ label: "Mis cursos", onClick: () => nav("cursos") }, { label: curso.nombre }]} />
+        <span className="pf-tag">{curso.nivel}</span>
+        <h2 className="pf-serif" style={{ fontSize: 30, margin: "6px 0 10px" }}>{curso.nombre}</h2>
+        <p className="pf-muted" style={{ maxWidth: 620, marginBottom: 34 }}>{curso.descripcion}</p>
+        <div className="pf-grid-2">
+          {curso.unidades.map((u) => (
+            <button key={u.id} className="pf-card" onClick={() => nav("unidad", { cursoKey: view.cursoKey, unidadId: u.id })}>
+              <span className="pf-tag teal">{u.temas.length} tema{u.temas.length > 1 ? "s" : ""}</span>
+              <h3>{u.nombre}</h3>
+              <p>{u.resumen}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const UnidadDetalle = () => {
+    const curso = CURSOS_DETALLE[view.cursoKey];
+    const unidad = curso?.unidades.find((u) => u.id === view.unidadId);
+    if (!curso || !unidad) return <Empty text="Unidad no encontrada." onBack={() => nav("cursos")} />;
+    return (
+      <div className="pf-container pf-section" style={{ paddingTop: 44 }}>
+        <Breadcrumb items={[
+          { label: "Mis cursos", onClick: () => nav("cursos") },
+          { label: curso.nombre, onClick: () => nav("curso", { cursoKey: view.cursoKey }) },
+          { label: unidad.nombre },
+        ]} />
+        <h2 className="pf-serif" style={{ fontSize: 28, margin: "6px 0 10px" }}>{unidad.nombre}</h2>
+        <p className="pf-muted" style={{ maxWidth: 620, marginBottom: 34 }}>{unidad.resumen}</p>
+        <div className="pf-grid-2">
+          {unidad.temas.map((t) => (
+            <button key={t.id} className="pf-card" onClick={() => nav("tema", { cursoKey: view.cursoKey, unidadId: unidad.id, temaId: t.id })}>
+              <h3>{t.nombre}</h3>
+              <p>{t.introduccion}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const TemaDetalle = () => {
+    const curso = CURSOS_DETALLE[view.cursoKey];
+    const unidad = curso?.unidades.find((u) => u.id === view.unidadId);
+    const tema = unidad?.temas.find((t) => t.id === view.temaId);
+    if (!curso || !unidad || !tema) return <Empty text="Tema no encontrado." onBack={() => nav("cursos")} />;
+    const recursosTema = RECURSOS.filter((r) => r.tema === tema.id);
+    return (
+      <div className="pf-container pf-section" style={{ paddingTop: 44 }}>
+        <Breadcrumb items={[
+          { label: "Mis cursos", onClick: () => nav("cursos") },
+          { label: curso.nombre, onClick: () => nav("curso", { cursoKey: view.cursoKey }) },
+          { label: unidad.nombre, onClick: () => nav("unidad", { cursoKey: view.cursoKey, unidadId: unidad.id }) },
+          { label: tema.nombre },
+        ]} />
+        <h2 className="pf-serif" style={{ fontSize: 27, margin: "6px 0 18px" }}>{tema.nombre}</h2>
+
+        <div className="pf-topic-block">
+          <h3>Introducción</h3>
+          <p>{tema.introduccion}</p>
+        </div>
+        <div className="pf-topic-block">
+          <h3>Objetivo de aprendizaje</h3>
+          <p>{tema.objetivo}</p>
+        </div>
+        <div className="pf-topic-block">
+          <h3>Conceptos fundamentales</h3>
+          <div className="pf-chip-row">{tema.conceptos.map((c) => <span className="pf-chip" key={c}>{c}</span>)}</div>
+        </div>
+        <div className="pf-topic-block">
+          <h3>Explicación del contenido</h3>
+          <p>{tema.contenido}</p>
+        </div>
+        {recursosTema.length > 0 && (
+          <div className="pf-topic-block">
+            <h3>Recursos de este tema</h3>
+            {recursosTema.map((r) => <ResourceRow key={r.id} r={r} onOpen={() => setToast(`Contenido de ejemplo: aquí se abriría "${r.titulo}".`)} />)}
+          </div>
+        )}
+        <div className="pf-topic-block">
+          <h3>Preguntas de reflexión</h3>
+          {tema.preguntasReflexion.map((p, i) => (
+            <div key={i} style={{ marginBottom: 12 }}>
+              <p style={{ marginBottom: 6 }}>{p}</p>
+              <textarea className="pf-reflection" placeholder="Escribe tu respuesta aquí…" />
+            </div>
+          ))}
+        </div>
+        <div className="pf-btn-row" style={{ marginTop: 8 }}>
+          <button className="pf-btn pf-btn-primary" onClick={() => nav("estudio", { temaId: tema.id, unidadId: unidad.id, cursoKey: view.cursoKey })}>
+            <Brain size={16} /> Repasar en Modo estudio
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  const Recursos = () => (
+    <div className="pf-container pf-section" style={{ paddingTop: 44 }}>
+      <div className="pf-section-head">
+        <div>
+          <h2>Recursos</h2>
+          <p>Guías, presentaciones, videos, lecturas y más material de la asignatura.</p>
+        </div>
+      </div>
+      <div className="pf-filter-bar">
+        <input className="pf-input" placeholder="Buscar por título o descripción…" value={resourceFilters.texto} onChange={(e) => setResourceFilters((f) => ({ ...f, texto: e.target.value }))} />
+        <select className="pf-select" value={resourceFilters.tipo} onChange={(e) => setResourceFilters((f) => ({ ...f, tipo: e.target.value }))}>
+          <option value="todos">Todos los tipos</option>
+          {Object.entries(TIPOS_RECURSO).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+        </select>
+      </div>
+      {filteredResources.length === 0 ? (
+        <Empty text="No se encontraron recursos con esos filtros." />
+      ) : (
+        filteredResources.map((r) => <ResourceRow key={r.id} r={r} onOpen={() => setToast(`Contenido de ejemplo: aquí se abriría "${r.titulo}".`)} />)
+      )}
+    </div>
+  );
+
+  const ModoEstudio = () => {
+    const temaSeleccionadoId = view.temaId;
+    let temaSeleccionado = null;
+    if (temaSeleccionadoId) {
+      const curso = CURSOS_DETALLE[view.cursoKey];
+      const unidad = curso?.unidades.find((u) => u.id === view.unidadId);
+      temaSeleccionado = unidad?.temas.find((t) => t.id === temaSeleccionadoId);
+    }
+
+    if (!temaSeleccionado) {
+      const curso = CURSOS_DETALLE[CURSO_DEMO_KEY];
+      return (
+        <div className="pf-container pf-section" style={{ paddingTop: 44 }}>
+          <div className="pf-section-head">
+            <div>
+              <h2>Modo estudio</h2>
+              <p>Elige un tema para repasarlo con resumen, conceptos, flashcards y autoevaluación.</p>
+            </div>
+          </div>
+          <div className="pf-grid-2">
+            {curso.unidades.flatMap((u) => u.temas).map((t) => {
+              const unidad = curso.unidades.find((u) => u.temas.includes(t));
+              return (
+                <button key={t.id} className="pf-card" onClick={() => nav("estudio", { cursoKey: CURSO_DEMO_KEY, unidadId: unidad.id, temaId: t.id })}>
+                  <span className="pf-tag teal">{unidad.nombre}</span>
+                  <h3>{t.nombre}</h3>
+                  <p>{t.objetivo}</p>
+                </button>
+              );
+            })}
+          </div>
+          <div style={{ marginTop: 36 }}>
+            <button className="pf-btn pf-btn-secondary" onClick={() => nav("flashcards")}><Sparkles size={16} /> Ir directo a las flashcards generales</button>
+          </div>
+        </div>
+      );
+    }
+
+    const autoresTema = temaSeleccionado.autores.map((id) => AUTORES.find((a) => a.id === id)).filter(Boolean);
+
+    return (
+      <div className="pf-container pf-section" style={{ paddingTop: 44 }}>
+        <Breadcrumb items={[{ label: "Modo estudio", onClick: () => nav("estudio") }, { label: temaSeleccionado.nombre }]} />
+        <h2 className="pf-serif" style={{ fontSize: 27, margin: "6px 0 24px" }}>{temaSeleccionado.nombre}</h2>
+
+        <div className="pf-topic-block">
+          <h3>Resumen</h3>
+          <p>{temaSeleccionado.contenido}</p>
+        </div>
+        <div className="pf-topic-block">
+          <h3>Conceptos fundamentales</h3>
+          <div className="pf-chip-row">{temaSeleccionado.conceptos.map((c) => <span className="pf-chip" key={c}>{c}</span>)}</div>
+        </div>
+        {autoresTema.length > 0 && (
+          <div className="pf-topic-block">
+            <h3>Autores relacionados</h3>
+            <div className="pf-chip-row">
+              {autoresTema.map((a) => <button key={a.id} className="pf-chip" style={{ cursor: "pointer" }} onClick={() => nav("autor", { autorId: a.id })}>{a.nombre}</button>)}
+            </div>
+          </div>
+        )}
+        <div className="pf-topic-block">
+          <h3>Preguntas para repasar</h3>
+          <ul style={{ paddingLeft: 18 }}>
+            {temaSeleccionado.preguntasReflexion.map((p, i) => <li key={i}>{p}</li>)}
+          </ul>
+        </div>
+        <div className="pf-btn-row" style={{ margin: "10px 0 40px" }}>
+          <button className="pf-btn pf-btn-primary" onClick={() => nav("flashcards")}><Sparkles size={16} /> Repasar con flashcards</button>
+        </div>
+
+        <div className="pf-topic-block">
+          <h3>Autoevaluación</h3>
+          <p style={{ marginBottom: 18 }}>Preguntas de ejemplo para practicar antes de tu evaluación.</p>
+          <Quiz />
+        </div>
+      </div>
+    );
+  };
+
+  const Quiz = () => (
+    <div>
+      {AUTOEVALUACION.map((q, qi) => {
+        const answered = quizAnswers[qi];
+        return (
+          <div key={qi} style={{ marginBottom: 30 }}>
+            <p className="pf-quiz-q">{qi + 1}. {q.pregunta}</p>
+            {q.opciones.map((op, oi) => {
+              let cls = "pf-quiz-opt";
+              if (answered !== undefined) {
+                if (oi === q.correcta) cls += " correct";
+                else if (oi === answered) cls += " incorrect";
+              }
+              return (
+                <button key={oi} className={cls} disabled={answered !== undefined} onClick={() => setQuizAnswers((a) => ({ ...a, [qi]: oi }))}>
+                  {op}
+                </button>
+              );
+            })}
+            {answered !== undefined && (
+              <div className="pf-quiz-fb">
+                {answered === q.correcta ? <Check size={16} color="#6FAE8F" style={{ flexShrink: 0, marginTop: 1 }} /> : <XCircle size={16} color="#C9695F" style={{ flexShrink: 0, marginTop: 1 }} />}
+                <span>{answered === q.correcta ? "¡Correcto! " : "No es correcto. "}{q.explicacion}</span>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  const Flashcards = () => {
+    const card = FLASHCARDS[flashIndex];
+    const go = (dir) => {
+      setFlashFlipped(false);
+      setFlashIndex((i) => (i + dir + FLASHCARDS.length) % FLASHCARDS.length);
+    };
+    return (
+      <div className="pf-container pf-section" style={{ paddingTop: 44 }}>
+        <div className="pf-section-head">
+          <div>
+            <h2>Flashcards</h2>
+            <p>Pulsa la tarjeta para ver la respuesta. Contenido de ejemplo sobre filosofía política.</p>
+          </div>
+        </div>
+        <div className="pf-flashcard-wrap">
+          <div className={"pf-flashcard" + (flashFlipped ? " back" : "")} onClick={() => setFlashFlipped((f) => !f)}>
+            <span className="face-label">{flashFlipped ? "RESPUESTA" : "PREGUNTA"}</span>
+            <p className="txt">{flashFlipped ? card.back : card.front}</p>
+          </div>
+          <div className="pf-flash-controls">
+            <button className="pf-icon-btn" onClick={() => go(-1)}><ChevronLeft size={18} /></button>
+            <button className="pf-icon-btn" onClick={() => setFlashFlipped((f) => !f)}><RotateCcw size={16} /></button>
+            <span className="pf-flash-counter">{flashIndex + 1} / {FLASHCARDS.length}</span>
+            <button className="pf-icon-btn" onClick={() => go(1)}><ChevronRight size={18} /></button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const Paes = () => (
+    <div className="pf-container pf-section" style={{ paddingTop: 44 }}>
+      <div className="pf-section-head">
+        <div>
+          <h2>Preparación PAES</h2>
+          <p>Sección independiente con material de preparación para la prueba de acceso.</p>
+        </div>
+      </div>
+      <div className="pf-grid-2">
+        {[
+          { t: "Comprensión lectora filosófica", d: "Textos filosóficos breves con preguntas al estilo PAES." },
+          { t: "Estrategias de lectura", d: "Técnicas para abordar textos argumentativos complejos en tiempo limitado." },
+          { t: "Ensayos y argumentación", d: "Pautas para estructurar respuestas argumentativas." },
+          { t: "Banco de preguntas", d: "Ejercicios de práctica organizados por dificultad." },
+        ].map((c) => (
+          <button key={c.t} className="pf-card disabled">
+            <span className="pf-tag">Próximamente</span>
+            <h3>{c.t}</h3>
+            <p>{c.d}</p>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  const Biblioteca = () => (
+    <div className="pf-container pf-section" style={{ paddingTop: 44 }}>
+      <div className="pf-section-head">
+        <div>
+          <h2>Biblioteca filosófica</h2>
+          <p>Autores y conceptos clave de la asignatura.</p>
+        </div>
+      </div>
+      <h3 className="pf-serif" style={{ fontSize: 18, margin: "0 0 14px" }}>Autores</h3>
+      <div className="pf-grid" style={{ marginBottom: 40 }}>
+        {AUTORES.map((a) => (
+          <button key={a.id} className="pf-card" onClick={() => nav("autor", { autorId: a.id })}>
+            <h3 style={{ fontSize: 16 }}>{a.nombre}</h3>
+            <p>{a.epoca}{!a.fleshed ? " · Próximamente" : ""}</p>
+          </button>
+        ))}
+      </div>
+      <h3 className="pf-serif" style={{ fontSize: 18, margin: "0 0 14px" }}>Conceptos</h3>
+      <div className="pf-chip-row">
+        {CONCEPTOS.map((c) => (
+          <button key={c} className="pf-chip" style={{ cursor: "pointer" }} onClick={() => runSearch(c)}>{c}</button>
+        ))}
+      </div>
+    </div>
+  );
+
+  const AutorDetalle = () => {
+    const autor = AUTORES.find((a) => a.id === view.autorId);
+    if (!autor) return <Empty text="Autor no encontrado." onBack={() => nav("biblioteca")} />;
+    if (!autor.fleshed) {
+      return (
+        <div className="pf-container pf-section" style={{ paddingTop: 44 }}>
+          <Breadcrumb items={[{ label: "Biblioteca", onClick: () => nav("biblioteca") }, { label: autor.nombre }]} />
+          <Empty text={`La página de ${autor.nombre} aún no ha sido completada. Próximamente.`} onBack={() => nav("biblioteca")} />
+        </div>
+      );
+    }
+    return (
+      <div className="pf-container pf-section" style={{ paddingTop: 44 }}>
+        <Breadcrumb items={[{ label: "Biblioteca", onClick: () => nav("biblioteca") }, { label: autor.nombre }]} />
+        <div className="pf-author-hero">
+          <div className="pf-author-avatar">{autor.nombre[0]}</div>
+          <div>
+            <h2 className="pf-serif" style={{ fontSize: 27, margin: 0 }}>{autor.nombre}</h2>
+            <p className="pf-muted" style={{ margin: "2px 0 0" }}>{autor.epoca}</p>
+          </div>
+        </div>
+        <div className="pf-topic-block"><h3>Biografía breve</h3><p>{autor.bio}</p></div>
+        <div className="pf-topic-block"><h3>Contexto histórico</h3><p>{autor.contexto}</p></div>
+        <div className="pf-topic-block">
+          <h3>Principales obras</h3>
+          <ul style={{ paddingLeft: 18 }}>{autor.obras.map((o) => <li key={o}>{o}</li>)}</ul>
+        </div>
+        <div className="pf-topic-block">
+          <h3>Conceptos fundamentales</h3>
+          <div className="pf-chip-row">{autor.conceptos.map((c) => <span className="pf-chip" key={c}>{c}</span>)}</div>
+        </div>
+        <div className="pf-topic-block"><h3>Ética</h3><p>{autor.etica}</p></div>
+        <div className="pf-topic-block"><h3>Política</h3><p>{autor.politica}</p></div>
+        <div className="pf-topic-block">
+          <h3>Preguntas para estudiar</h3>
+          <ul style={{ paddingLeft: 18 }}>{autor.preguntas.map((p, i) => <li key={i}>{p}</li>)}</ul>
+        </div>
+      </div>
+    );
+  };
+
+  const Busqueda = () => {
+    const { recursos, autores, conceptos } = searchResults;
+    const total = recursos.length + autores.length + conceptos.length;
+    return (
+      <div className="pf-container pf-section" style={{ paddingTop: 44 }}>
+        <h2 className="pf-serif" style={{ fontSize: 26, marginBottom: 6 }}>Resultados para "{view.q}"</h2>
+        <p className="pf-muted" style={{ marginBottom: 30 }}>{total} resultado{total !== 1 ? "s" : ""} encontrado{total !== 1 ? "s" : ""}.</p>
+        {total === 0 && <Empty text="No encontramos coincidencias. Prueba con otro autor o concepto." />}
+        {conceptos.length > 0 && (
+          <div className="pf-topic-block">
+            <h3>Conceptos</h3>
+            <div className="pf-chip-row">{conceptos.map((c) => <span className="pf-chip" key={c}>{c}</span>)}</div>
+          </div>
+        )}
+        {autores.length > 0 && (
+          <div className="pf-topic-block">
+            <h3>Autores</h3>
+            <div className="pf-grid">
+              {autores.map((a) => (
+                <button key={a.id} className="pf-card" onClick={() => nav("autor", { autorId: a.id })}>
+                  <h3 style={{ fontSize: 15.5 }}>{a.nombre}</h3><p>{a.epoca}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        {recursos.length > 0 && (
+          <div className="pf-topic-block">
+            <h3>Recursos</h3>
+            {recursos.map((r) => <ResourceRow key={r.id} r={r} onOpen={() => setToast(`Contenido de ejemplo: aquí se abriría "${r.titulo}".`)} />)}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const Sobre = () => (
+    <div className="pf-container pf-section" style={{ paddingTop: 44, maxWidth: 720 }}>
+      <h2 className="pf-serif" style={{ fontSize: 27, marginBottom: 14 }}>Sobre la asignatura</h2>
+      <p className="pf-muted" style={{ marginBottom: 16 }}>
+        Contenido de ejemplo: esta asignatura busca que los estudiantes desarrollen pensamiento crítico y capacidad
+        argumentativa a través del estudio de las grandes preguntas filosóficas, desde la Antigüedad hasta el
+        presente, con especial énfasis en la filosofía política y ética.
+      </p>
+      <p className="pf-muted" style={{ marginBottom: 16 }}>
+        A lo largo del año se trabajará con lecturas de fuente primaria, análisis de casos contemporáneos y
+        actividades de argumentación oral y escrita.
+      </p>
+      <div className="pf-topic-block" style={{ marginTop: 24 }}>
+        <h3>Evaluación</h3>
+        <p>Contenido de ejemplo: la evaluación combina pruebas de contenidos, ensayos filosóficos y participación en debates guiados.</p>
+      </div>
+    </div>
+  );
+
+  const Terrapesos = () => {
+    const d = tpData;
+
+    const TpEditableText = ({ value, onChange }) => {
+      if (!tpEditing) return <p className="pf-tp-callout-text">{value}</p>;
+      return <textarea className="pf-reflection" value={value} onChange={(e) => onChange(e.target.value)} />;
+    };
+
+    const TpRow = ({ item, tier, danger, onChangeField, onRemove }) => (
+      <div className={"pf-tp-item" + (danger ? " danger" : "")}>
+        {tier && <div className="pf-tp-dot" style={{ background: TERRAPESOS_TIERS[tier]?.hex || "#8FAE5D" }} />}
+        <div className="pf-tp-body">
+          {tpEditing ? (
+            <>
+              <input className="pf-tp-edit-input" value={item.label} onChange={(e) => onChangeField("label", e.target.value)} />
+              <input className="pf-tp-edit-input" style={{ marginTop: 5 }} placeholder="Nota (opcional)" value={item.note || ""} onChange={(e) => onChangeField("note", e.target.value)} />
+            </>
+          ) : (
+            <>
+              <div className="pf-tp-label">{item.label}</div>
+              {item.note && <div className="pf-tp-note">{item.note}</div>}
+            </>
+          )}
+        </div>
+        {tpEditing ? (
+          <input className="pf-tp-edit-input price" value={item.price} onChange={(e) => onChangeField("price", e.target.value)} />
+        ) : (
+          <div className="pf-tp-price">{item.price}</div>
+        )}
+        {tpEditing && <button className="pf-tp-remove" onClick={onRemove}>×</button>}
+      </div>
+    );
+
+    return (
+      <div className="pf-container pf-section" style={{ paddingTop: 44 }}>
+        <div className="pf-section-head">
+          <div>
+            <h2>Terrapesos</h2>
+            <p>Sistema de incentivos del curso · Colegio Quillota Terranova · Banco Terranova</p>
+          </div>
+        </div>
+
+        <p className="pf-muted" style={{ fontSize: 12, marginBottom: 14 }}>
+          En esta versión, los cambios que hagas en "Editar contenido" se guardan solo en este navegador, no se comparten entre estudiantes.
+        </p>
+        <div className="pf-tp-toolbar">
+          {!tpEditing ? (
+            <button className="pf-btn pf-btn-secondary" onClick={tpRequestEdit}><Pencil size={15} /> Editar contenido</button>
+          ) : (
+            <>
+              <button className="pf-btn pf-btn-primary" onClick={tpSave}><Save size={15} /> Guardar cambios</button>
+              <button className="pf-btn pf-btn-secondary" onClick={tpCancelEdit}>Cancelar</button>
+              <button className="pf-btn pf-btn-secondary" onClick={tpReset}>Restablecer valores originales</button>
+            </>
+          )}
+        </div>
+
+        <div className="pf-tabs">
+          <button className={"pf-tab" + (tpTab === "cambio" ? " active" : "")} onClick={() => setTpTab("cambio")}>Casa de Cambio</button>
+          <button className={"pf-tab" + (tpTab === "ganar" ? " active" : "")} onClick={() => setTpTab("ganar")}>Cómo se ganan</button>
+          <button className={"pf-tab" + (tpTab === "multas" ? " active" : "")} onClick={() => setTpTab("multas")}>Multas</button>
+        </div>
+
+        {tpTab === "cambio" && (
+          <>
+            <div className="pf-tp-columns">
+              <div>
+                <div className="pf-tp-col-title">Beneficios individuales</div>
+                <div className="pf-tp-col-desc">Se pagan con tus propios terrapesos, cuando quieras canjearlos.</div>
+                {d.individual.map((item, i) => (
+                  <TpRow key={i} item={item} tier={item.tier} onChangeField={(f, v) => tpUpdateListItem("individual", i, f, v)} onRemove={() => tpRemoveListItem("individual", i)} />
+                ))}
+                {tpEditing && <button className="pf-tp-add-row" onClick={() => tpAddListItem("individual", true)}><Plus size={13} style={{ verticalAlign: -2 }} /> Agregar beneficio</button>}
+              </div>
+              <div>
+                <div className="pf-tp-col-title">Beneficios en grupo</div>
+                <div className="pf-tp-col-desc">Se juntan entre varios estudiantes, aportando terrapesos cada uno.</div>
+                {d.grupo.map((item, i) => (
+                  <TpRow key={i} item={item} tier={item.tier} onChangeField={(f, v) => tpUpdateListItem("grupo", i, f, v)} onRemove={() => tpRemoveListItem("grupo", i)} />
+                ))}
+                {tpEditing && <button className="pf-tp-add-row" onClick={() => tpAddListItem("grupo", true)}><Plus size={13} style={{ verticalAlign: -2 }} /> Agregar beneficio</button>}
+                <div className="pf-tp-legend">
+                  {Object.entries(TERRAPESOS_TIERS).map(([k, v]) => (
+                    <span key={k}><div className="pf-tp-dot" style={{ background: v.hex }} />{v.label}</span>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="pf-quote-block" style={{ marginTop: 22, alignItems: "flex-start" }}>
+              <Coins size={20} color="#C9A227" style={{ flexShrink: 0, marginTop: 3 }} />
+              <div style={{ flex: 1 }}>
+                <div className="pf-eyebrow" style={{ marginBottom: 6 }}>Ejemplo</div>
+                <TpEditableText value={d.exampleText} onChange={(v) => setTpData((s) => ({ ...s, exampleText: v }))} />
+              </div>
+            </div>
+          </>
+        )}
+
+        {tpTab === "ganar" && (
+          <>
+            <div className="pf-quote-block" style={{ marginBottom: 26, alignItems: "flex-start" }}>
+              <Coins size={20} color="#C9A227" style={{ flexShrink: 0, marginTop: 3 }} />
+              <div style={{ flex: 1 }}>
+                <div className="pf-eyebrow" style={{ marginBottom: 6 }}>Importante</div>
+                <TpEditableText value={d.importantText} onChange={(v) => setTpData((s) => ({ ...s, importantText: v }))} />
+              </div>
+            </div>
+
+            {["g1", "g2", "g3", "g4"].map((gk) => {
+              const group = d[gk];
+              return (
+                <div className="pf-tp-group" key={gk}>
+                  <div className="pf-tp-group-title">
+                    <div className="pf-tp-dot" style={{ background: TERRAPESOS_TIERS[group.tier]?.hex || "#8FAE5D" }} />
+                    {group.titulo}
+                    {group.frecuencia && <span className="pf-tp-group-freq">({group.frecuencia})</span>}
+                  </div>
+                  {group.items.map((item, i) => (
+                    <TpRow key={i} item={item} tier={null} onChangeField={(f, v) => tpUpdateGroupItem(gk, i, f, v)} onRemove={() => tpRemoveGroupItem(gk, i)} />
+                  ))}
+                  {tpEditing && <button className="pf-tp-add-row" onClick={() => tpAddGroupItem(gk)}><Plus size={13} style={{ verticalAlign: -2 }} /> Agregar</button>}
+                </div>
+              );
+            })}
+
+            <div className="pf-quote-block" style={{ marginTop: 8, alignItems: "flex-start" }}>
+              <Info size={20} color="#C9A227" style={{ flexShrink: 0, marginTop: 3 }} />
+              <div style={{ flex: 1 }}>
+                <div className="pf-eyebrow" style={{ marginBottom: 6 }}>Cómo funciona</div>
+                <TpEditableText value={d.funcionaText} onChange={(v) => setTpData((s) => ({ ...s, funcionaText: v }))} />
+              </div>
+            </div>
+          </>
+        )}
+
+        {tpTab === "multas" && (
+          <>
+            <div className="pf-quote-block warn" style={{ marginBottom: 26, alignItems: "flex-start" }}>
+              <Info size={20} color="#D2695C" style={{ flexShrink: 0, marginTop: 3 }} />
+              <div style={{ flex: 1 }}>
+                <div className="pf-eyebrow" style={{ marginBottom: 6, color: "#D2695C" }}>Importante</div>
+                <TpEditableText value={d.multasImportantText} onChange={(v) => setTpData((s) => ({ ...s, multasImportantText: v }))} />
+              </div>
+            </div>
+            <div className="pf-tp-col-title">Multas</div>
+            <div className="pf-tp-col-desc">Se descuentan de tus terrapesos acumulados cuando corresponda.</div>
+            {d.multas.map((item, i) => (
+              <TpRow key={i} item={item} tier={null} danger onChangeField={(f, v) => tpUpdateListItem("multas", i, f, v)} onRemove={() => tpRemoveListItem("multas", i)} />
+            ))}
+            {tpEditing && <button className="pf-tp-add-row" onClick={() => tpAddListItem("multas", false, { label: "Nueva multa", note: "", price: "-1.000" })}><Plus size={13} style={{ verticalAlign: -2 }} /> Agregar multa</button>}
+          </>
+        )}
+
+        {!tpLoaded && <p className="pf-muted" style={{ marginTop: 18, fontSize: 12.5 }}>Cargando valores guardados…</p>}
+
+        {tpAskingPin && (
+          <div className="pf-search-overlay" onClick={() => setTpAskingPin(false)}>
+            <div className="pf-search-panel" style={{ maxWidth: 380 }} onClick={(e) => e.stopPropagation()}>
+              <div style={{ padding: "22px 22px 6px" }}>
+                <h3 className="pf-serif" style={{ fontSize: 18, margin: "0 0 6px" }}>Modo edición · Terrapesos</h3>
+                <p className="pf-muted" style={{ fontSize: 13, margin: "0 0 16px" }}>Ingresa la clave del profesor o profesora para editar los valores.</p>
+                <input
+                  autoFocus
+                  type="password"
+                  className="pf-input"
+                  style={{ width: "100%", marginBottom: 8 }}
+                  placeholder="Clave"
+                  value={tpPinInput}
+                  onChange={(e) => { setTpPinInput(e.target.value); setTpPinError(false); }}
+                  onKeyDown={(e) => e.key === "Enter" && tpConfirmPin()}
+                />
+                {tpPinError && <p style={{ color: "#C9695F", fontSize: 12.5, margin: "0 0 10px" }}>Clave incorrecta. Intenta nuevamente.</p>}
+              </div>
+              <div style={{ display: "flex", gap: 10, padding: "10px 22px 22px" }}>
+                <button className="pf-btn pf-btn-primary" onClick={tpConfirmPin}>Entrar</button>
+                <button className="pf-btn pf-btn-secondary" onClick={() => setTpAskingPin(false)}>Cancelar</button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  function Empty({ text, onBack }) {
+    return (
+      <div className="pf-empty">
+        <p>{text}</p>
+        {onBack && <button className="pf-btn pf-btn-secondary" style={{ marginTop: 14 }} onClick={onBack}>Volver</button>}
+      </div>
+    );
+  }
+
+  const PAGES = {
+    home: Home, inicio: Home,
+    cursos: Cursos,
+    curso: CursoDetalle,
+    unidad: UnidadDetalle,
+    tema: TemaDetalle,
+    recursos: Recursos,
+    estudio: ModoEstudio,
+    flashcards: Flashcards,
+    paes: Paes,
+    biblioteca: Biblioteca,
+    autor: AutorDetalle,
+    busqueda: Busqueda,
+    terrapesos: Terrapesos,
+    sobre: Sobre,
+  };
+
+  const Page = PAGES[view.page] || Home;
+
+  return (
+    <div className="pf-app">
+      <style>{STYLES}</style>
+      <Nav />
+      <SearchOverlay />
+      <Page />
+      {toast && (
+        <div style={{ position: "fixed", bottom: 20, left: "50%", transform: "translateX(-50%)", background: "#262939", border: "1px solid #333650", color: "#F1EEE4", padding: "12px 18px", borderRadius: 10, fontSize: 13.5, zIndex: 80, maxWidth: "90%", textAlign: "center" }}>
+          {toast}
+          <button style={{ marginLeft: 12, background: "none", border: "none", color: "#A6A8BE", cursor: "pointer" }} onClick={() => setToast(null)}>✕</button>
+        </div>
+      )}
+      <footer className="pf-footer pf-container">
+        {NOMBRE_PLATAFORMA} · Plataforma de apoyo pedagógico para Filosofía · Versión inicial con contenido de ejemplo
+      </footer>
+    </div>
+  );
+}
+
+createRoot(document.getElementById("root")).render(<PlataformaFilosofia />);
+</script>
+</body>
+</html>
