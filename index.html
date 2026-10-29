@@ -2400,6 +2400,50 @@ footer.pf-footer { border-top: 1px solid rgba(139,92,246,0.15); margin-top: 20px
 .pf-vinculos { display: flex; flex-direction: column; gap: 8px; max-height: 360px; overflow-y: auto; }
 .pf-vinculo-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border-radius: 10px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07); }
 
+
+/* ---------- Compañero (mascota) ---------- */
+.pf-pet-card { display: grid; grid-template-columns: 240px 1fr; gap: 22px; align-items: center; }
+.pf-pet-stage { position: relative; width: 240px; height: 240px; display: flex; align-items: center; justify-content: center; border-radius: 22px; background: radial-gradient(circle at 50% 60%, rgba(255,255,255,.07), rgba(8,11,20,.55) 70%); border: 1px solid rgba(255,255,255,.08); overflow: hidden; }
+.pf-pet-aura { position: absolute; inset: 22%; border-radius: 50%; background: radial-gradient(circle, currentColor 0%, transparent 68%); opacity: .16; }
+.pf-pet-stage.etapa-3 .pf-pet-aura, .pf-pet-stage.etapa-4 .pf-pet-aura { opacity: .26; inset: 14%; }
+.pf-pet-stage.etapa-5 .pf-pet-aura { opacity: .36; inset: 6%; }
+.pf-pet-stage.mood-radiante .pf-pet-aura { opacity: .42; animation: pf-pet-pulse 2.6s ease-in-out infinite; }
+.pf-pet-body { position: relative; z-index: 1; animation: pf-pet-bob 4.2s ease-in-out infinite; }
+.pf-pet-stage.mood-radiante .pf-pet-body { animation-duration: 2.2s; }
+.pf-pet-stage.mood-hambre .pf-pet-body { animation-duration: 7s; opacity: .8; }
+.pf-pet-stage.mood-dormido .pf-pet-body, .pf-pet-stage.mood-espera .pf-pet-body { animation: pf-pet-breathe 6s ease-in-out infinite; opacity: .55; filter: saturate(.4) drop-shadow(0 0 4px currentColor); }
+.pf-pet-crown { position: absolute; z-index: 2; top: 14px; left: 50%; margin-left: -27px; animation: pf-pet-bob 4.2s ease-in-out infinite; }
+.pf-pet-orbit { position: absolute; z-index: 2; top: 50%; left: 50%; margin: -12px 0 0 -12px; animation: pf-pet-orbit 8s linear infinite; }
+.pf-pet-orbit.o2 { animation-duration: 12s; animation-direction: reverse; margin: -9px 0 0 -9px; }
+.pf-pet-stage.etapa-4 .pf-pet-orbit { --r: 86px; }
+.pf-pet-stage.etapa-5 .pf-pet-orbit { --r: 100px; }
+.pf-pet-z { position: absolute; z-index: 3; top: 24px; right: 34px; font-family: 'Cormorant Garamond', serif; font-size: 26px; color: var(--text-muted); animation: pf-pet-z 3.2s ease-in-out infinite; }
+.pf-pet-z small { display: inline-block; font-size: .7em; margin-left: 3px; opacity: .8; }
+.pf-pet-bubble { display: inline-block; padding: 10px 14px; border-radius: 14px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); font-style: italic; color: var(--text); max-width: 100%; }
+.pf-pet-evo { margin-bottom: 8px; padding: 8px 12px; border-radius: 10px; background: linear-gradient(110deg, rgba(233,196,106,.22), rgba(139,92,246,.2)); border: 1px solid rgba(233,196,106,.5); color: var(--gold); font-weight: 600; }
+.pf-pet-stars { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 10px; }
+.pf-pet-stars .on { color: var(--gold); }
+.pf-pet-stars .off { color: var(--text-muted); opacity: .35; filter: none; }
+.pf-pet-pick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.pf-pet-opt { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 14px 8px; border-radius: 14px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1); cursor: pointer; font-family: inherit; color: var(--text); text-align: center; transition: transform .15s ease, border-color .2s ease, background .2s ease; }
+.pf-pet-opt span { font-size: 12px; color: var(--text-muted); }
+.pf-pet-opt:hover { transform: translateY(-2px); }
+.pf-pet-opt.on { border-color: currentColor; background: rgba(255,255,255,.09); box-shadow: 0 0 20px rgba(139,92,246,.25); }
+.pf-pet-opt strong { color: var(--text); }
+@keyframes pf-pet-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+@keyframes pf-pet-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.03); } }
+@keyframes pf-pet-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.12); } }
+@keyframes pf-pet-orbit { from { transform: rotate(0deg) translateX(var(--r, 86px)) rotate(0deg); } to { transform: rotate(360deg) translateX(var(--r, 86px)) rotate(-360deg); } }
+@keyframes pf-pet-z { 0%, 100% { transform: translateY(0); opacity: .9; } 50% { transform: translateY(-8px); opacity: .45; } }
+@media (max-width: 640px) {
+  .pf-pet-card { grid-template-columns: 1fr; justify-items: center; }
+  .pf-pet-info { width: 100%; }
+  .pf-pet-pick { grid-template-columns: repeat(2, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pf-pet-body, .pf-pet-crown, .pf-pet-orbit, .pf-pet-z, .pf-pet-aura { animation: none !important; }
+}
+
 `;
 
 /* ============================================================
@@ -2792,7 +2836,8 @@ function SessionProvider({ children }) {
     const fecha = new Date().toISOString();
     const p = { uid: user.uid, email: user.email, curso: cursoId, nombre, fecha };
     try {
-      await window.storage.set(vk, JSON.stringify(p), true);
+      // el vínculo público no guarda el correo; el correo queda solo en el perfil privado
+      await window.storage.set(vk, JSON.stringify({ uid: user.uid, curso: cursoId, nombre, fecha }), true);
       await window.storage.set(perfilKey(user.uid), JSON.stringify(p), true);
     } catch (e) {
       return { ok: false, msg: "No se pudo guardar el vínculo. Revisa tu conexión e intenta de nuevo." };
@@ -2872,7 +2917,12 @@ function GestionVinculos() {
       const r = await window.storage.list("vinculo-", true);
       const out = [];
       for (const k of r.keys) {
-        try { const d = JSON.parse((await window.storage.get(k, true)).value); out.push({ k, ...d }); } catch (e) {}
+        try {
+          const d = JSON.parse((await window.storage.get(k, true)).value);
+          let email = d.email || "";
+          if (!email && d.uid) { try { email = JSON.parse((await window.storage.get(perfilKey(d.uid), true)).value).email || ""; } catch (e) {} }
+          out.push({ k, ...d, email });
+        } catch (e) {}
       }
       out.sort((a, b) => String(a.nombre).localeCompare(String(b.nombre), "es"));
       setItems(out);
@@ -2895,7 +2945,7 @@ function GestionVinculos() {
   return (
     <div className="pf-perfil-card" style={{ width: "100%" }}>
       <h3 className="pf-perfil-h">Cuentas vinculadas</h3>
-      <p className="pf-muted" style={{ fontSize: 12.5, margin: "0 0 10px" }}>«Liberar» desvincula la cuenta de ese nombre; el estudiante podrá vincularse otra vez.</p>
+      <p className="pf-muted" style={{ fontSize: 12.5, margin: "0 0 10px" }}>«Liberar» desvincula la cuenta de ese nombre; el estudiante podrá vincularse otra vez. Para ver y liberar cuentas debes haber iniciado sesión con el correo del profesor.</p>
       {items === null ? <p className="pf-muted">Cargando…</p> : items.length === 0 ? <p className="pf-muted">Todavía no hay cuentas vinculadas.</p> : (
         <div className="pf-vinculos">
           {items.map((it) => (
@@ -2906,6 +2956,194 @@ function GestionVinculos() {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+
+/* ============================================================
+   COMPAÑERO (mascota): crece con el nivel del estudiante y su
+   ánimo depende de cuántos días hábiles lleva sin jugar.
+   Nunca muere: si falta, se duerme y despierta al volver.
+   Se guarda en shared/mascota-<uid> (solo su dueño la lee).
+   ============================================================ */
+const ESPECIES = [
+  { id: "owl", nombre: "Búho", color: "violet", frase: "Observa en silencio" },
+  { id: "fox", nombre: "Zorro", color: "gold", frase: "Astuto y curioso" },
+  { id: "wolf", nombre: "Lobo", color: "cyan", frase: "Siempre en manada" },
+  { id: "raven", nombre: "Cuervo", color: "teal", frase: "Guarda cada idea brillante" },
+];
+const ETAPAS = ["Huevo", "Cría", "Joven", "Adulto", "Ancestral"];
+const ETAPA_NIVEL = [1, 2, 4, 6, 8]; // nivel con el que empieza cada etapa
+function etapaDeNivel(n) { let e = 1; ETAPA_NIVEL.forEach((v, i) => { if (n >= v) e = i + 1; }); return e; }
+const mascotaKey = (uid) => "mascota-" + uid;
+
+function animoMascota(st) {
+  if (!st || !st.ultimoDia) return { id: "espera", energia: 30, txt: "Esperando tu primera partida" };
+  const hoy = todayKey();
+  if (st.ultimoDia === hoy) return { id: "radiante", energia: 100, txt: "Radiante: hoy ya jugaste" };
+  const g = weekdaysBetween(st.ultimoDia, hoy);
+  if (g <= 1) return { id: "contento", energia: 75, txt: "Contento" };
+  if (g <= 3) return { id: "hambre", energia: 45, txt: "Con hambre de ideas: juega hoy" };
+  return { id: "dormido", energia: 15, txt: "Dormido: despiértalo jugando" };
+}
+const FRASES_MASCOTA = {
+  radiante: ["¡Hoy pensamos juntos!", "Cada partida me hace crecer.", "Deus sive natura… ¡y tú eres naturaleza pensante!"],
+  contento: ["¿Una partida rápida hoy?", "Sócrates diría: preguntar es avanzar.", "Tu racha me mantiene fuerte."],
+  hambre: ["Tengo hambre de ideas… ¿jugamos?", "Una pregunta del día me alimentaría.", "No me olvides: ¡un juego basta!"],
+  dormido: ["Zzz… despiértame con una partida.", "Sueño con volver a jugar contigo.", "Zzz… ¿ya es lunes?"],
+  espera: ["¡Hola! Juega tu primera partida y me despertaré.", "Aún soy un huevito… ¡ayúdame a crecer!"],
+};
+function fraseMascota(animo) {
+  const arr = FRASES_MASCOTA[animo] || FRASES_MASCOTA.contento;
+  const d = Math.floor(Date.now() / 86400000);
+  return arr[d % arr.length];
+}
+
+function HuevoSvg({ size }) {
+  return (
+    <svg viewBox="0 0 64 64" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="pf-sym pf-pet-body" aria-hidden="true" focusable="false">
+      <path d="M32 6 C44 6 52 24 52 38 C52 50 43 58 32 58 C21 58 12 50 12 38 C12 24 20 6 32 6Z" />
+      <path d="M14 36 L22 31 L28 37 L35 30 L42 37 L50 32" />
+      <circle cx="24" cy="20" r="1.6" /><circle cx="40" cy="46" r="2" /><circle cx="31" cy="48" r="1.3" />
+    </svg>
+  );
+}
+function CoronaSvg() {
+  return (
+    <svg viewBox="0 0 64 40" width="54" height="34" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="pf-sym pf-pet-crown c-gold" aria-hidden="true" focusable="false">
+      <path d="M8 34 L12 12 L24 24 L32 6 L40 24 L52 12 L56 34Z" />
+      <circle cx="12" cy="10" r="2" /><circle cx="32" cy="4" r="2" /><circle cx="52" cy="10" r="2" />
+    </svg>
+  );
+}
+function MascotaArte({ especie, etapa, animo }) {
+  const esp = ESPECIES.find((e) => e.id === especie) || ESPECIES[0];
+  const size = [0, 84, 72, 98, 124, 148][etapa] || 90;
+  return (
+    <div className={"pf-pet-stage c-" + esp.color + " mood-" + animo + " etapa-" + etapa} role="img" aria-label={esp.nombre + " en etapa " + ETAPAS[etapa - 1]}>
+      <div className="pf-pet-aura" />
+      {etapa >= 4 && <Sym name="stars" size={24} className="pf-pet-orbit o1" />}
+      {etapa >= 5 && <Sym name="stars" size={18} className="pf-pet-orbit o2" />}
+      {etapa === 1 ? <HuevoSvg size={size} /> : <Sym name={esp.id} size={size} className="pf-pet-body" />}
+      {etapa === 5 && <CoronaSvg />}
+      {(animo === "dormido" || animo === "espera") && <span className="pf-pet-z" aria-hidden="true">z<small>z</small><small>z</small></span>}
+    </div>
+  );
+}
+
+function MascotaCard({ st, nv, xp }) {
+  const { user } = useSession();
+  const [pet, setPet] = useState(undefined); // undefined = cargando, null = sin mascota
+  const [elegida, setElegida] = useState("owl");
+  const [nombre, setNombre] = useState("");
+  const [editando, setEditando] = useState(false);
+  const [evo, setEvo] = useState("");
+  const [busy, setBusy] = useState(false);
+  const etapa = etapaDeNivel(nv.actual.n);
+  const animo = animoMascota(st);
+
+  useEffect(() => {
+    if (!user) return;
+    let vivo = true;
+    (async () => {
+      try {
+        const res = await window.storage.get(mascotaKey(user.uid), true);
+        const m = JSON.parse(res.value);
+        if (!vivo) return;
+        setPet(m);
+        if ((m.etapa || 1) < etapa) {
+          setEvo("¡" + m.nombre + " evolucionó a " + ETAPAS[etapa - 1] + "!");
+          const nuevo = { ...m, etapa };
+          try { await window.storage.set(mascotaKey(user.uid), JSON.stringify(nuevo), true); } catch (e) {}
+          if (vivo) setPet(nuevo);
+        }
+      } catch (e) {
+        if (vivo) setPet(null);
+      }
+    })();
+    return () => { vivo = false; };
+  }, [user && user.uid]);
+
+  const guardar = async (m) => {
+    setBusy(true);
+    try { await window.storage.set(mascotaKey(user.uid), JSON.stringify(m), true); setPet(m); }
+    catch (e) { /* si falla, queda como estaba */ }
+    setBusy(false);
+  };
+  const adoptar = () => {
+    const esp = ESPECIES.find((e) => e.id === elegida) || ESPECIES[0];
+    const n = nombre.trim().slice(0, 16) || esp.nombre;
+    guardar({ uid: user.uid, especie: esp.id, nombre: n, etapa, nacio: new Date().toISOString() });
+  };
+  const renombrar = () => {
+    const n = nombre.trim().slice(0, 16);
+    if (n) guardar({ ...pet, nombre: n });
+    setEditando(false);
+  };
+
+  if (pet === undefined) return null;
+
+  if (pet === null) {
+    return (
+      <div className="pf-perfil-card" style={{ marginTop: 16 }}>
+        <h3 className="pf-perfil-h">Adopta a tu compañero</h3>
+        <p className="pf-muted" style={{ fontSize: 13.5, marginTop: 0 }}>Nace como un huevo y crece con tu nivel. Se mantiene contento si juegas seguido. Nunca se muere: si faltas, se duerme y despierta cuando vuelves.</p>
+        <div className="pf-pet-pick" role="radiogroup" aria-label="Elige una criatura">
+          {ESPECIES.map((e) => (
+            <button key={e.id} role="radio" aria-checked={elegida === e.id} className={"pf-pet-opt c-" + e.color + (elegida === e.id ? " on" : "")} onClick={() => setElegida(e.id)}>
+              <Sym name={e.id} size={54} />
+              <strong>{e.nombre}</strong>
+              <span>{e.frase}</span>
+            </button>
+          ))}
+        </div>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginTop: 14 }}>
+          <input className="pf-input" style={{ maxWidth: 240 }} maxLength={16} placeholder="Ponle un nombre…" value={nombre} onChange={(e) => setNombre(e.target.value)} onKeyDown={(e) => e.key === "Enter" && adoptar()} aria-label="Nombre de tu compañero" />
+          <button className="pf-btn pf-btn-primary" disabled={busy} onClick={adoptar}>{busy ? "Adoptando…" : "Adoptar"}</button>
+        </div>
+      </div>
+    );
+  }
+
+  const espMeta = ESPECIES.find((e) => e.id === pet.especie) || ESPECIES[0];
+  const sigNivel = etapa < 5 ? ETAPA_NIVEL[etapa] : null;
+  const sigDef = sigNivel ? NIVELES_JUEGO.find((n) => n.n === sigNivel) : null;
+  const faltan = sigDef ? Math.max(0, sigDef.xp - xp) : 0;
+  const insig = (st.insignias || []).length;
+  return (
+    <div className="pf-perfil-card pf-pet-card" style={{ marginTop: 16 }}>
+      <MascotaArte especie={pet.especie} etapa={etapa} animo={animo.id} />
+      <div className="pf-pet-info">
+        {evo && <div className="pf-pet-evo" role="status">{evo}</div>}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          {editando ? (
+            <>
+              <input className="pf-input" style={{ maxWidth: 200 }} maxLength={16} autoFocus defaultValue={pet.nombre} onChange={(e) => setNombre(e.target.value)} onKeyDown={(e) => e.key === "Enter" && renombrar()} aria-label="Nuevo nombre" />
+              <button className="pf-btn pf-btn-primary" style={{ padding: "6px 12px", fontSize: 13 }} onClick={renombrar}>Guardar</button>
+            </>
+          ) : (
+            <>
+              <h3 className="pf-perfil-h" style={{ margin: 0 }}>{pet.nombre}</h3>
+              <button className="pf-link-btn" style={{ fontSize: 12.5 }} onClick={() => { setNombre(pet.nombre); setEditando(true); }}>Cambiar nombre</button>
+            </>
+          )}
+        </div>
+        <div className="pf-chip-row" style={{ margin: "8px 0" }}>
+          <span className="pf-chip">{espMeta.nombre}</span>
+          <span className="pf-chip pf-chip-me">{ETAPAS[etapa - 1]}</span>
+          <span className="pf-chip">Nivel {nv.actual.n} · {nv.actual.nombre}</span>
+        </div>
+        <div className="pf-pet-bubble">«{fraseMascota(animo.id)}»</div>
+        <div className="pf-streak-lbl" style={{ textAlign: "left", marginTop: 10 }}>Ánimo: {animo.txt}</div>
+        <div className="pf-mission-bar" style={{ marginTop: 6 }} role="progressbar" aria-valuenow={animo.energia} aria-valuemin="0" aria-valuemax="100" aria-label="Energía"><div className="pf-mission-bar-fill" style={{ width: animo.energia + "%" }} /></div>
+        <div className="pf-streak-lbl" style={{ textAlign: "left", marginTop: 8 }}>
+          {sigDef ? "Evoluciona a " + ETAPAS[etapa] + " en el nivel " + sigNivel + " · faltan " + faltan + " XP" : "Ya alcanzó su máxima evolución."}
+        </div>
+        <div className="pf-pet-stars" aria-label={insig + " de " + INSIGNIAS.length + " insignias"}>
+          {INSIGNIAS.map((b, i) => <Sym key={b.id} name="stars" size={16} className={i < insig ? "on" : "off"} />)}
+        </div>
+      </div>
     </div>
   );
 }
@@ -3020,6 +3258,8 @@ function PerfilPage({ tpData, nav }) {
     <div className="pf-container pf-section" style={{ paddingTop: 44 }}>
       {cabecera}
       <div className="pf-perfil-card">{cab}</div>
+
+      {st && nv && <MascotaCard st={st} nv={nv} xp={xp} />}
 
       {!est && (
         <div className="pf-perfil-card" style={{ marginTop: 16 }}>
