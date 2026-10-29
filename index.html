@@ -26,6 +26,7 @@
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 
 /* ------------------------------------------------------------
    Sustituto de window.storage (solo disponible dentro de
@@ -45,6 +46,9 @@ const firebaseConfig = {
 };
 const fbApp = initializeApp(firebaseConfig);
 const db = getFirestore(fbApp);
+const auth = getAuth(fbApp);
+// Dominio del correo institucional (sin @). Ej.: "colegio.cl". Si queda vacío, se acepta cualquier cuenta Google.
+const DOMINIO_INSTITUCIONAL = "";
 
 if (!window.storage) {
   window.storage = {
@@ -93,7 +97,7 @@ import {
   FileText, Presentation, Video, BookMarked, ClipboardList, Link2,
   Brain, Home as HomeIcon, ArrowRight, Quote, Compass, Sparkles,
   Coins, Pencil, Save, Plus, Trash2, Gamepad2, ArrowUp, ArrowDown, ArrowLeft, Music,
-  BookOpen, Feather, Scale, Landmark, Lightbulb, Glasses, Shuffle, Wand2, Inbox, Calendar, ChevronsLeft, ChevronsRight
+  BookOpen, Feather, Scale, Landmark, Lightbulb, Glasses, Shuffle, Wand2, Inbox, Calendar, ChevronsLeft, ChevronsRight, User, LogIn, LogOut, Trophy
 } from "lucide-react";
 
 /* ============================================================
@@ -2375,6 +2379,27 @@ footer.pf-footer { border-top: 1px solid rgba(139,92,246,0.15); margin-top: 20px
 .pf-topic-block .pf-tp-item::before { content: ""; position: absolute; left: 0; top: 17px; width: 8px; height: 8px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 10px var(--gold); }
 .pf-topic-block .pf-tp-price { color: var(--cyan); }
 
+
+/* ---------- Cuenta institucional / perfil ---------- */
+.pf-nav-account { margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.07); padding-top: 14px; border-radius: 0 0 10px 10px; }
+.pf-avatar-mini { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; display: block; }
+.pf-chip-me { display: inline-flex; align-items: center; gap: 6px; border-color: rgba(34,211,238,.45); color: var(--text); }
+.pf-link-btn { background: none; border: none; padding: 0; font: inherit; color: var(--cyan); text-decoration: underline; cursor: pointer; }
+.pf-link-btn:hover { color: var(--gold); }
+.pf-perfil-card { background: linear-gradient(160deg, rgba(139,92,246,.14), rgba(34,211,238,.07)); border: 1px solid rgba(139,92,246,.35); border-radius: 18px; padding: 22px; backdrop-filter: blur(6px); }
+.pf-perfil-login { max-width: 520px; display: flex; flex-direction: column; align-items: flex-start; gap: 14px; }
+.pf-perfil-h { font-family: 'Cormorant Garamond', serif; font-size: 24px; margin: 0 0 8px; color: var(--text); }
+.pf-perfil-list { margin: 0; padding-left: 18px; color: var(--text-muted); line-height: 1.7; font-size: 14.5px; }
+.pf-perfil-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.pf-perfil-avatar { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold); }
+.pf-perfil-avatar-ph { display: inline-flex; align-items: center; justify-content: center; background: var(--ink-2); color: var(--gold); }
+.pf-perfil-name { font-family: 'Cormorant Garamond', serif; font-size: 26px; line-height: 1.1; color: var(--text); }
+.pf-perfil-error { color: #FCA5A5; font-size: 13.5px; margin: 6px 0 0; }
+.pf-btn-google { display: inline-flex; align-items: center; gap: 10px; padding: 11px 20px; border-radius: 999px; border: 1px solid #dadce0; background: #fff; color: #3c4043; font: 600 14.5px/1 inherit; font-family: inherit; cursor: pointer; transition: transform .15s ease, box-shadow .2s ease; }
+.pf-btn-google:hover { transform: translateY(-1px); box-shadow: 0 6px 22px rgba(34,211,238,.28); }
+.pf-vinculos { display: flex; flex-direction: column; gap: 8px; max-height: 360px; overflow-y: auto; }
+.pf-vinculo-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border-radius: 10px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07); }
+
 `;
 
 /* ============================================================
@@ -2689,6 +2714,367 @@ function askAdmin(value) {
   return pin === ADMIN_PIN ? value : "";
 }
 
+
+/* ============================================================
+   CUENTA INSTITUCIONAL (Google) + PERFIL DEL ESTUDIANTE
+   - Inicio de sesión con Firebase Authentication (Google).
+   - La primera vez, cada estudiante vincula su cuenta con su
+     nombre de la lista de Terrapesos. Desde entonces los juegos,
+     los terrapesos y los logros usan ese perfil automáticamente.
+   - Quien no inicia sesión puede seguir eligiendo su nombre a mano.
+   ============================================================ */
+
+let DV_GOTO = null;
+const SessionCtx = React.createContext({ user: null, perfil: null, cargando: false, error: "", entrar: () => {}, salir: () => {}, vincular: async () => ({ ok: false }), desvincular: async () => {} });
+function useSession() { return React.useContext(SessionCtx); }
+const perfilKey = (uid) => "perfil-" + uid;
+const vinculoKey = (cursoId, nombre) => "vinculo-" + cursoId + "-" + String(nombre).replace(/[\/\s.]+/g, "_");
+
+function SessionProvider({ children }) {
+  const [user, setUser] = useState(null);
+  const [perfil, setPerfil] = useState(null);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    return onAuthStateChanged(auth, async (u) => {
+      if (!u) { setUser(null); setPerfil(null); setCargando(false); return; }
+      const mail = String(u.email || "").toLowerCase();
+      if (DOMINIO_INSTITUCIONAL && !mail.endsWith("@" + DOMINIO_INSTITUCIONAL.toLowerCase())) {
+        setError("Usa tu cuenta institucional (@" + DOMINIO_INSTITUCIONAL + "). La cuenta " + (u.email || "") + " no está permitida.");
+        try { await signOut(auth); } catch (e) {}
+        setUser(null); setPerfil(null); setCargando(false);
+        return;
+      }
+      setError("");
+      setUser({ uid: u.uid, email: u.email || "", nombre: u.displayName || "", foto: u.photoURL || "" });
+      try {
+        const res = await window.storage.get(perfilKey(u.uid), true);
+        setPerfil(JSON.parse(res.value));
+      } catch (e) {
+        setPerfil(null);
+      }
+      setCargando(false);
+    });
+  }, []);
+
+  const entrar = async () => {
+    setError("");
+    const p = new GoogleAuthProvider();
+    p.setCustomParameters({ prompt: "select_account", ...(DOMINIO_INSTITUCIONAL ? { hd: DOMINIO_INSTITUCIONAL } : {}) });
+    try {
+      await signInWithPopup(auth, p);
+    } catch (e) {
+      const c = e && e.code;
+      if (c === "auth/popup-blocked" || c === "auth/operation-not-supported-in-this-environment") {
+        try { await signInWithRedirect(auth, p); } catch (e2) { setError("No se pudo abrir el inicio de sesión. Prueba en otro navegador."); }
+      } else if (c === "auth/popup-closed-by-user" || c === "auth/cancelled-popup-request") {
+        // el usuario cerró la ventana: no es un error
+      } else if (c === "auth/unauthorized-domain") {
+        setError("Este sitio aún no está autorizado en Firebase (Authentication → Configuración → Dominios autorizados).");
+      } else if (c === "auth/operation-not-allowed") {
+        setError("El acceso con Google aún no está activado en Firebase (Authentication → Sign-in method).");
+      } else {
+        setError("No se pudo iniciar sesión (" + (c || "error") + "). Intenta de nuevo.");
+      }
+    }
+  };
+  const salir = async () => { try { await signOut(auth); } catch (e) {} setUser(null); setPerfil(null); };
+
+  const vincular = async (cursoId, nombre) => {
+    if (!user) return { ok: false, msg: "Primero inicia sesión." };
+    const vk = vinculoKey(cursoId, nombre);
+    try {
+      const r = await window.storage.get(vk, true);
+      const v = JSON.parse(r.value);
+      if (v && v.uid && v.uid !== user.uid) return { ok: false, msg: "Ese nombre ya está vinculado a otra cuenta. Si es un error, avísale a tu profesor." };
+    } catch (e) { /* sin vínculo previo */ }
+    const fecha = new Date().toISOString();
+    const p = { uid: user.uid, email: user.email, curso: cursoId, nombre, fecha };
+    try {
+      await window.storage.set(vk, JSON.stringify(p), true);
+      await window.storage.set(perfilKey(user.uid), JSON.stringify(p), true);
+    } catch (e) {
+      return { ok: false, msg: "No se pudo guardar el vínculo. Revisa tu conexión e intenta de nuevo." };
+    }
+    setPerfil(p);
+    return { ok: true };
+  };
+  const desvincular = async () => {
+    if (!user) return;
+    if (perfil) { try { await window.storage.delete(vinculoKey(perfil.curso, perfil.nombre), true); } catch (e) {} }
+    try { await window.storage.delete(perfilKey(user.uid), true); } catch (e) {}
+    setPerfil(null);
+  };
+
+  return <SessionCtx.Provider value={{ user, perfil, cargando, error, entrar, salir, vincular, desvincular }}>{children}</SessionCtx.Provider>;
+}
+
+function IdentityPicker({ cursos, cursoSel, nombreSel, setCursoSel, setNombreSel, onPick }) {
+  const { perfil, user } = useSession();
+  const pc = perfil ? perfil.curso : null;
+  const pn = perfil ? perfil.nombre : null;
+  useEffect(() => { if (pc) { setCursoSel(pc); setNombreSel(pn); } }, [pc, pn]);
+  if (perfil) {
+    const c = cursos.find((x) => x.id === perfil.curso);
+    return (
+      <div className="pf-chip-row">
+        <span className="pf-chip pf-chip-me"><User size={13} /> Jugando como <strong>{perfil.nombre}</strong>{c ? " · " + c.nombre : ""}</span>
+      </div>
+    );
+  }
+  const cursoObj = cursos.find((c) => c.id === cursoSel);
+  return (
+    <>
+      <div className="pf-chip-row">
+        {cursos.map((c) => (
+          <button
+            key={c.id}
+            className="pf-chip"
+            style={{ cursor: "pointer", ...(cursoSel === c.id ? { background: "var(--gold-soft)", color: "var(--ink)", borderColor: "var(--gold-soft)", fontWeight: 600 } : {}) }}
+            onClick={() => { setCursoSel(c.id); setNombreSel(""); if (onPick) onPick(); }}
+          >
+            {c.nombre}
+          </button>
+        ))}
+      </div>
+      {cursoSel && (
+        <select className="pf-select" style={{ width: "100%", maxWidth: 320 }} value={nombreSel} onChange={(e) => { setNombreSel(askAdmin(e.target.value)); if (onPick) onPick(); }}>
+          <option value="">Selecciona tu nombre…</option>
+          {cursoObj?.estudiantes.map((e) => <option key={e.label} value={e.label}>{e.label}</option>)}
+        </select>
+      )}
+      {!user && DV_GOTO && (
+        <p className="pf-muted" style={{ fontSize: 12.5, textAlign: "center", margin: 0 }}>
+          ¿Tienes cuenta institucional? <button className="pf-link-btn" onClick={() => DV_GOTO("perfil")}>Ingresa</button> y no tendrás que elegir tu nombre cada vez.
+        </p>
+      )}
+    </>
+  );
+}
+
+function GoogleG() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+      <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.5l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z" />
+      <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.5z" />
+      <path fill="#FBBC05" d="M10.5 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.9-4.7l-7.9-6.1A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.8l7.9-6.1z" />
+      <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.9 2.3-8.4 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z" />
+    </svg>
+  );
+}
+
+function GestionVinculos() {
+  const [abierto, setAbierto] = useState(false);
+  const [items, setItems] = useState(null);
+  const cargar = async () => {
+    try {
+      const r = await window.storage.list("vinculo-", true);
+      const out = [];
+      for (const k of r.keys) {
+        try { const d = JSON.parse((await window.storage.get(k, true)).value); out.push({ k, ...d }); } catch (e) {}
+      }
+      out.sort((a, b) => String(a.nombre).localeCompare(String(b.nombre), "es"));
+      setItems(out);
+    } catch (e) { setItems([]); }
+  };
+  const abrir = () => {
+    const pin = window.prompt("Clave del profesor:");
+    if (pin !== TERRAPESOS_EDIT_PIN) return;
+    setAbierto(true);
+    cargar();
+  };
+  const liberar = async (it) => {
+    try {
+      await window.storage.delete(it.k, true);
+      if (it.uid) await window.storage.delete(perfilKey(it.uid), true);
+    } catch (e) {}
+    cargar();
+  };
+  if (!abierto) return <button className="pf-link-btn" style={{ fontSize: 12.5 }} onClick={abrir}>Soy profesor: gestionar vínculos de cuentas</button>;
+  return (
+    <div className="pf-perfil-card" style={{ width: "100%" }}>
+      <h3 className="pf-perfil-h">Cuentas vinculadas</h3>
+      <p className="pf-muted" style={{ fontSize: 12.5, margin: "0 0 10px" }}>«Liberar» desvincula la cuenta de ese nombre; el estudiante podrá vincularse otra vez.</p>
+      {items === null ? <p className="pf-muted">Cargando…</p> : items.length === 0 ? <p className="pf-muted">Todavía no hay cuentas vinculadas.</p> : (
+        <div className="pf-vinculos">
+          {items.map((it) => (
+            <div key={it.k} className="pf-vinculo-row">
+              <span><strong>{it.nombre}</strong> <span className="pf-muted" style={{ fontSize: 12 }}>· {it.curso}</span><br /><span className="pf-muted" style={{ fontSize: 12 }}>{it.email}</span></span>
+              <button className="pf-btn pf-btn-secondary" style={{ padding: "6px 12px", fontSize: 12.5 }} onClick={() => liberar(it)}>Liberar</button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PerfilPage({ tpData, nav }) {
+  const { user, perfil, cargando, error, entrar, salir, vincular, desvincular } = useSession();
+  const [cursoSel, setCursoSel] = useState("");
+  const [nombreSel, setNombreSel] = useState("");
+  const [msg, setMsg] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [st, setSt] = useState(null);
+  const cursos = tpData.estudiantesPorCurso || [];
+  const cursoObj = cursos.find((c) => c.id === (perfil ? perfil.curso : cursoSel));
+  const est = perfil && cursoObj ? cursoObj.estudiantes.find((e) => e.label === perfil.nombre) : null;
+  const num = (p) => parseInt(String(p).replace(/[.\s]/g, ""), 10) || 0;
+  const ranking = cursoObj ? [...cursoObj.estudiantes].sort((a, b) => num(b.price) - num(a.price)) : [];
+  const puesto = est ? ranking.filter((e) => num(e.price) > num(est.price)).length + 1 : 0;
+
+  useEffect(() => {
+    if (!perfil) { setSt(null); return; }
+    let vivo = true;
+    (async () => {
+      const d = await leerLogros(logrosKey(perfil.curso, perfil.nombre));
+      if (vivo) setSt({ ...LOGROS_VACIO(), ...(d || {}) });
+    })();
+    return () => { vivo = false; };
+  }, [perfil && perfil.curso, perfil && perfil.nombre]);
+
+  const hacerVinculo = async () => {
+    if (!cursoSel || !nombreSel) return;
+    setBusy(true); setMsg("");
+    const r = await vincular(cursoSel, nombreSel);
+    setBusy(false);
+    if (!r.ok) setMsg(r.msg);
+  };
+
+  const cabecera = (
+    <div className="pf-section-head">
+      <div>
+        <h2>Mi perfil</h2>
+        <p>{perfil ? "Tus terrapesos, tus logros y tus juegos en un solo lugar." : "Entra con tu cuenta institucional para jugar con tu nombre, ver tus terrapesos y seguir tus logros."}</p>
+      </div>
+    </div>
+  );
+
+  if (cargando) return <div className="pf-container pf-section" style={{ paddingTop: 44 }}>{cabecera}<p className="pf-muted">Cargando…</p></div>;
+
+  if (!user) {
+    return (
+      <div className="pf-container pf-section" style={{ paddingTop: 44 }}>
+        {cabecera}
+        <div className="pf-perfil-card pf-perfil-login">
+          <Sym name="owl" size={54} className="c-gold" />
+          <h3 className="pf-perfil-h" style={{ marginTop: 6 }}>Ingresa con tu cuenta institucional</h3>
+          <ul className="pf-perfil-list">
+            <li>Juega todos los juegos con tu nombre, sin elegirlo cada vez.</li>
+            <li>Mira tu saldo de terrapesos y tu lugar en el curso.</li>
+            <li>Sigue tu nivel, tu racha y tus insignias.</li>
+          </ul>
+          <button className="pf-btn-google" onClick={entrar}><GoogleG /> Continuar con Google</button>
+          {DOMINIO_INSTITUCIONAL && <p className="pf-muted" style={{ fontSize: 12.5, margin: 0 }}>Usa tu correo @{DOMINIO_INSTITUCIONAL}</p>}
+          {error && <p className="pf-perfil-error" role="alert">{error}</p>}
+        </div>
+        <div style={{ marginTop: 18 }}><GestionVinculos /></div>
+      </div>
+    );
+  }
+
+  const cab = (
+    <div className="pf-perfil-head">
+      {user.foto ? <img className="pf-perfil-avatar" src={user.foto} alt="" referrerPolicy="no-referrer" /> : <span className="pf-perfil-avatar pf-perfil-avatar-ph"><User size={26} /></span>}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="pf-perfil-name">{perfil ? perfil.nombre : (user.nombre || "Estudiante")}</div>
+        <div className="pf-muted" style={{ fontSize: 13, overflow: "hidden", textOverflow: "ellipsis" }}>{user.email}{cursoObj ? " · " + cursoObj.nombre : ""}</div>
+      </div>
+      <button className="pf-btn pf-btn-secondary" style={{ padding: "8px 14px", fontSize: 13 }} onClick={salir}><LogOut size={15} /> Cerrar sesión</button>
+    </div>
+  );
+
+  if (!perfil) {
+    return (
+      <div className="pf-container pf-section" style={{ paddingTop: 44 }}>
+        {cabecera}
+        <div className="pf-perfil-card">
+          {cab}
+          <h3 className="pf-perfil-h" style={{ marginTop: 18 }}>Vincula tu cuenta con tu nombre</h3>
+          <p className="pf-muted" style={{ fontSize: 13.5, marginTop: 0 }}>Solo se hace una vez. Elige tu curso y tu nombre tal como aparece en la lista de Terrapesos. Si te equivocas, tu profesor puede liberarlo.</p>
+          <div className="pf-chip-row" style={{ marginBottom: 10 }}>
+            {cursos.map((c) => (
+              <button key={c.id} className="pf-chip" style={{ cursor: "pointer", ...(cursoSel === c.id ? { background: "var(--gold-soft)", color: "var(--ink)", borderColor: "var(--gold-soft)", fontWeight: 600 } : {}) }} onClick={() => { setCursoSel(c.id); setNombreSel(""); setMsg(""); }}>{c.nombre}</button>
+            ))}
+          </div>
+          {cursoSel && (
+            <select className="pf-select" style={{ width: "100%", maxWidth: 360 }} value={nombreSel} onChange={(e) => { setNombreSel(e.target.value); setMsg(""); }}>
+              <option value="">Selecciona tu nombre…</option>
+              {(cursoObj ? cursoObj.estudiantes : []).map((e) => <option key={e.label} value={e.label}>{e.label}</option>)}
+            </select>
+          )}
+          <div style={{ marginTop: 14 }}>
+            <button className="pf-btn pf-btn-primary" disabled={!cursoSel || !nombreSel || busy} onClick={hacerVinculo}>{busy ? "Vinculando…" : "Vincular mi cuenta"}</button>
+          </div>
+          {msg && <p className="pf-perfil-error" role="alert">{msg}</p>}
+        </div>
+        <div style={{ marginTop: 18 }}><GestionVinculos /></div>
+      </div>
+    );
+  }
+
+  const xp = st ? calcXP(st) : 0;
+  const nv = st ? nivelDeXP(xp) : null;
+  return (
+    <div className="pf-container pf-section" style={{ paddingTop: 44 }}>
+      {cabecera}
+      <div className="pf-perfil-card">{cab}</div>
+
+      {!est && (
+        <div className="pf-perfil-card" style={{ marginTop: 16 }}>
+          <p style={{ margin: "0 0 10px" }}>Tu nombre «{perfil.nombre}» ya no aparece en la lista de Terrapesos. Puede que tu profesor lo haya cambiado.</p>
+          <button className="pf-btn pf-btn-secondary" onClick={desvincular}>Elegir mi nombre de nuevo</button>
+        </div>
+      )}
+
+      {est && (
+        <div className="pf-streak-row" style={{ marginTop: 16 }}>
+          <div className="pf-streak-box"><div className="pf-streak-num"><Coins size={20} style={{ verticalAlign: "-3px" }} /> {est.price}</div><div className="pf-streak-lbl">Mis terrapesos</div></div>
+          <div className="pf-streak-box"><div className="pf-streak-num"><Trophy size={20} style={{ verticalAlign: "-3px" }} /> {puesto}° <span style={{ fontSize: 14, opacity: .7 }}>de {ranking.length}</span></div><div className="pf-streak-lbl">Lugar en {cursoObj.nombre}</div></div>
+          {st && <div className="pf-streak-box"><div className="pf-streak-num">🔥 {rachaVigente(st)}</div><div className="pf-streak-lbl">Racha actual (días)</div></div>}
+          {st && <div className="pf-streak-box"><div className="pf-streak-num">🪙 {(st.totalGanado || 0).toLocaleString("es-CL")}</div><div className="pf-streak-lbl">Ganados jugando</div></div>}
+        </div>
+      )}
+
+      {st && nv && (
+        <>
+          <h3 className="pf-perfil-h" style={{ margin: "26px 0 12px" }}>Mis logros</h3>
+          <div className="pf-level-card">
+            <div className="pf-level-badge">{nv.actual.n}</div>
+            <div style={{ flex: 1 }}>
+              <div className="pf-level-name">Nivel {nv.actual.n} · {nv.actual.nombre}</div>
+              <div className="pf-mission-bar" style={{ marginTop: 8 }}><div className="pf-mission-bar-fill" style={{ width: nv.progreso + "%" }} /></div>
+              <div className="pf-streak-lbl" style={{ textAlign: "left", marginTop: 4 }}>
+                {xp} XP{nv.sig ? " · faltan " + (nv.sig.xp - xp) + " para «" + nv.sig.nombre + "»" : " · ¡nivel máximo!"} · mejor racha {st.mejorRacha || 0}
+              </div>
+            </div>
+          </div>
+          <div className="pf-badge-grid" style={{ marginTop: 14 }}>
+            {INSIGNIAS.map((b) => {
+              const ok = (st.insignias || []).includes(b.id);
+              return (
+                <div key={b.id} className={"pf-badge" + (ok ? "" : " locked")} title={b.desc}>
+                  <div className="pf-badge-emoji">{ok ? b.emoji : "🔒"}</div>
+                  <div className="pf-badge-name">{b.nombre}</div>
+                  <div className="pf-badge-desc">{b.desc}</div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      <div className="pf-btn-row" style={{ marginTop: 22 }}>
+        <button className="pf-btn pf-btn-primary" onClick={() => nav("juegos")}>Ir a los juegos <ArrowRight size={16} /></button>
+        <button className="pf-btn pf-btn-secondary" onClick={() => nav("terrapesos")}>Ver Terrapesos</button>
+        <a className="pf-btn pf-btn-secondary" href={FILOSOFOS_URL} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>Jugar Filocaptura</a>
+      </div>
+      <div style={{ marginTop: 22 }}><GestionVinculos /></div>
+    </div>
+  );
+}
+
 function DailyPlayGate({ gameId, amount, estudiantesPorCurso, onReward, children }) {
   const dailyKey = gameId + "-dia-respuestas-" + todayKey();
   const [answeredList, setAnsweredList] = useState(null);
@@ -2728,24 +3114,7 @@ function DailyPlayGate({ gameId, amount, estudiantesPorCurso, onReward, children
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14, width: "100%" }}>
-      <div className="pf-chip-row">
-        {cursos.map((c) => (
-          <button
-            key={c.id}
-            className="pf-chip"
-            style={{ cursor: "pointer", ...(cursoSel === c.id ? { background: "var(--gold-soft)", color: "var(--ink)", borderColor: "var(--gold-soft)", fontWeight: 600 } : {}) }}
-            onClick={() => { setCursoSel(c.id); setNombreSel(""); }}
-          >
-            {c.nombre}
-          </button>
-        ))}
-      </div>
-      {cursoSel && (
-        <select className="pf-select" style={{ width: "100%", maxWidth: 320 }} value={nombreSel} onChange={(e) => setNombreSel(askAdmin(e.target.value))}>
-          <option value="">Selecciona tu nombre…</option>
-          {cursoObj?.estudiantes.map((e) => <option key={e.label} value={e.label}>{e.label}</option>)}
-        </select>
-      )}
+      <IdentityPicker cursos={cursos} cursoSel={cursoSel} nombreSel={nombreSel} setCursoSel={setCursoSel} setNombreSel={setNombreSel} />
       {!cursoSel || !nombreSel ? (
         <p className="pf-muted" style={{ fontSize: 12.5, textAlign: "center" }}>Elige tu curso y tu nombre para poder ganar {amount} terrapesos jugando.</p>
       ) : yaJugado ? (
@@ -4239,24 +4608,7 @@ function LogrosTab({ tpData }) {
       <p className="pf-muted" style={{ fontSize: 12.5, textAlign: "center", maxWidth: 460 }}>
         Participa en un juego cada día hábil para mantener tu racha 🔥. Los fines de semana no cortan la racha. Reúne insignias por tus logros.
       </p>
-      <div className="pf-chip-row">
-        {cursos.map((c) => (
-          <button
-            key={c.id}
-            className="pf-chip"
-            style={{ cursor: "pointer", ...(cursoSel === c.id ? { background: "var(--gold-soft)", color: "var(--ink)", borderColor: "var(--gold-soft)", fontWeight: 600 } : {}) }}
-            onClick={() => { setCursoSel(c.id); setNombreSel(""); }}
-          >
-            {c.nombre}
-          </button>
-        ))}
-      </div>
-      {cursoSel && (
-        <select className="pf-select" style={{ width: "100%", maxWidth: 320 }} value={nombreSel} onChange={(e) => setNombreSel(askAdmin(e.target.value))}>
-          <option value="">Selecciona tu nombre…</option>
-          {cursoObj?.estudiantes.map((e) => <option key={e.label} value={e.label}>{e.label}</option>)}
-        </select>
-      )}
+      <IdentityPicker cursos={cursos} cursoSel={cursoSel} nombreSel={nombreSel} setCursoSel={setCursoSel} setNombreSel={setNombreSel} />
       {st && (
         <>
           {(() => {
@@ -4355,25 +4707,7 @@ function PreguntaDelDiaGame({ tpData, claimGameReward }) {
 
       {cursos.length === 0 && <p className="pf-muted" style={{ fontSize: 13 }}>Todavía no hay cursos cargados en Terrapesos.</p>}
 
-      <div className="pf-chip-row">
-        {cursos.map((c) => (
-          <button
-            key={c.id}
-            className="pf-chip"
-            style={{ cursor: "pointer", ...(cursoSel === c.id ? { background: "var(--gold-soft)", color: "var(--ink)", borderColor: "var(--gold-soft)", fontWeight: 600 } : {}) }}
-            onClick={() => { setCursoSel(c.id); setNombreSel(""); setResultado(null); setOpcion(null); }}
-          >
-            {c.nombre}
-          </button>
-        ))}
-      </div>
-
-      {cursoSel && (
-        <select className="pf-select" style={{ width: "100%", maxWidth: 320 }} value={nombreSel} onChange={(e) => { setNombreSel(askAdmin(e.target.value)); setResultado(null); setOpcion(null); }}>
-          <option value="">Selecciona tu nombre…</option>
-          {cursoObj?.estudiantes.map((e) => <option key={e.label} value={e.label}>{e.label}</option>)}
-        </select>
-      )}
+      <IdentityPicker cursos={cursos} cursoSel={cursoSel} nombreSel={nombreSel} setCursoSel={setCursoSel} setNombreSel={setNombreSel} onPick={() => { setResultado(null); setOpcion(null); }} />
 
       {cursoSel && nombreSel && yaRespondida && !resultado && (
         <div className="pf-quote-block" style={{ maxWidth: 420 }}>
@@ -4481,24 +4815,7 @@ function CapitalesGame({ tpData, claimGameReward }) {
 
       {fase === "inicio" && (
         <>
-          <div className="pf-chip-row">
-            {cursos.map((c) => (
-              <button
-                key={c.id}
-                className="pf-chip"
-                style={{ cursor: "pointer", ...(cursoSel === c.id ? { background: "var(--gold-soft)", color: "var(--ink)", borderColor: "var(--gold-soft)", fontWeight: 600 } : {}) }}
-                onClick={() => { setCursoSel(c.id); setNombreSel(""); }}
-              >
-                {c.nombre}
-              </button>
-            ))}
-          </div>
-          {cursoSel && (
-            <select className="pf-select" style={{ width: "100%", maxWidth: 320 }} value={nombreSel} onChange={(e) => setNombreSel(askAdmin(e.target.value))}>
-              <option value="">Selecciona tu nombre…</option>
-              {cursoObj?.estudiantes.map((e) => <option key={e.label} value={e.label}>{e.label}</option>)}
-            </select>
-          )}
+          <IdentityPicker cursos={cursos} cursoSel={cursoSel} nombreSel={nombreSel} setCursoSel={setCursoSel} setNombreSel={setNombreSel} />
           {cursoSel && nombreSel && yaJugo && (
             <div className="pf-quote-block" style={{ maxWidth: 420 }}>
               <p>Ya jugaste la capital de hoy, {nombreSel.split(" ")[0]}. ¡Vuelve mañana por una nueva!</p>
@@ -4594,6 +4911,7 @@ function Juegos({ tpData, claimGameReward }) {
 }
 
 function PlataformaFilosofia() {
+  const sesion = useSession();
   const [view, setView] = useState({ page: "home" });
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sideCollapsed, setSideCollapsed] = useState(() => { try { return localStorage.getItem("dv_side") === "1"; } catch (e) { return false; } });
@@ -4831,6 +5149,8 @@ function PlataformaFilosofia() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  useEffect(() => { DV_GOTO = nav; return () => { if (DV_GOTO === nav) DV_GOTO = null; }; });
+
   const runSearch = (q) => {
     setQuery(q);
     nav("busqueda", { q });
@@ -4899,6 +5219,10 @@ function PlataformaFilosofia() {
               <span className="pf-nav-label">{it.label}</span>
             </button>
           ))}
+          <button title={sesion.user ? "Mi perfil" : "Ingresar con mi cuenta"} className={"pf-nav-link pf-nav-account" + (view.page === "perfil" ? " active" : "")} aria-current={view.page === "perfil" ? "page" : undefined} onClick={() => { nav("perfil"); setMobileOpen(false); }}>
+            <span className="pf-nav-ico">{sesion.user && sesion.user.foto ? <img className="pf-avatar-mini" src={sesion.user.foto} alt="" referrerPolicy="no-referrer" /> : (sesion.user ? <User size={18} /> : <LogIn size={18} />)}</span>
+            <span className="pf-nav-label">{sesion.user ? ((sesion.perfil ? sesion.perfil.nombre : sesion.user.nombre) || "Mi perfil").split(" ")[0] : "Ingresar"}</span>
+          </button>
         </div>
         <div className="pf-side-foot">
           <span className="pf-side-note">Deus sive natura</span>
@@ -4968,6 +5292,7 @@ function PlataformaFilosofia() {
           <div className="pf-btn-row">
             <a className="pf-btn pf-btn-primary" href={FILOSOFOS_URL} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>Jugar Filocaptura <ArrowRight size={16} /></a>
             <button className="pf-btn pf-btn-secondary" onClick={() => nav("terrapesos")}>Ver Terrapesos</button>
+            <button className="pf-btn pf-btn-secondary" onClick={() => nav("perfil")}>{sesion.user ? "Mi perfil" : "Ingresar con mi cuenta"}</button>
           </div>
         </div>
       </div>
@@ -6321,7 +6646,7 @@ function PlataformaFilosofia() {
         <Nav />
         <SearchOverlay />
         <div key={view.page + (view.cursoKey || "") + (view.unidadId || "") + (view.temaId || "") + (view.autorId || "")} className="pf-page-enter">
-          {view.page === "juegos" ? <Juegos tpData={tpData} claimGameReward={claimGameReward} /> : <Page />}
+          {view.page === "juegos" ? <Juegos tpData={tpData} claimGameReward={claimGameReward} /> : view.page === "perfil" ? <PerfilPage tpData={tpData} nav={nav} /> : <Page />}
         </div>
         <button className="pf-buzon-fab" onClick={() => nav("buzon")} aria-label="Ir al buzón de preguntas y sugerencias" title="Buzón de preguntas y sugerencias">
           <img src={IMG.buzonIcon} alt="" />
@@ -6343,7 +6668,7 @@ function PlataformaFilosofia() {
   );
 }
 
-createRoot(document.getElementById("root")).render(<PlataformaFilosofia />);
+createRoot(document.getElementById("root")).render(<SessionProvider><PlataformaFilosofia /></SessionProvider>);
 </script>
 </body>
 </html>
