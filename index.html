@@ -49,6 +49,9 @@ const db = getFirestore(fbApp);
 const auth = getAuth(fbApp);
 // Dominio del correo institucional (sin @). Ej.: "colegio.cl". Si queda vacío, se acepta cualquier cuenta Google.
 const DOMINIO_INSTITUCIONAL = "";
+// Correo(s) del profesor: ven el panel docente. Deben coincidir con los de las reglas de Firestore (esProfe).
+const ADMIN_EMAILS = ["fernandoferna111@gmail.com"];
+const esCorreoAdmin = (m) => ADMIN_EMAILS.includes(String(m || "").toLowerCase());
 
 if (!window.storage) {
   window.storage = {
@@ -78,6 +81,13 @@ if (!window.storage) {
       localStorage.removeItem(key);
       return { key, deleted: true, shared };
     },
+    // Lee todos los documentos compartidos de una vez (lo usa el panel docente).
+    async dump() {
+      const snap = await getDocs(collection(db, "shared"));
+      const o = {};
+      snap.docs.forEach((d) => { const v = d.data(); o[d.id] = v && v.value; });
+      return o;
+    },
     async list(prefix, shared) {
       if (shared) {
         const snap = await getDocs(collection(db, "shared"));
@@ -97,7 +107,7 @@ import {
   FileText, Presentation, Video, BookMarked, ClipboardList, Link2,
   Brain, Home as HomeIcon, ArrowRight, Quote, Compass, Sparkles,
   Coins, Pencil, Save, Plus, Trash2, Gamepad2, ArrowUp, ArrowDown, ArrowLeft, Music,
-  BookOpen, Feather, Scale, Landmark, Lightbulb, Glasses, Shuffle, Wand2, Inbox, Calendar, ChevronsLeft, ChevronsRight, User, LogIn, LogOut, Trophy
+  BookOpen, Feather, Scale, Landmark, Lightbulb, Glasses, Shuffle, Wand2, Inbox, Calendar, ChevronsLeft, ChevronsRight, User, LogIn, LogOut, Trophy, ShieldCheck
 } from "lucide-react";
 
 /* ============================================================
@@ -2444,6 +2454,65 @@ footer.pf-footer { border-top: 1px solid rgba(139,92,246,0.15); margin-top: 20px
   .pf-pet-body, .pf-pet-crown, .pf-pet-orbit, .pf-pet-z, .pf-pet-aura { animation: none !important; }
 }
 
+
+/* ---------- Compañero: sprites y dock flotante ---------- */
+.pf-sprite { display: block; max-width: none; pointer-events: none; user-select: none; -webkit-user-drag: none; filter: drop-shadow(0 6px 10px rgba(0,0,0,.45)); }
+.pf-sprite-fallback { color: var(--violet-soft); }
+.pf-pet-hit { position: relative; z-index: 1; display: flex; align-items: flex-end; justify-content: center; background: none; border: none; padding: 0; cursor: pointer; border-radius: 16px; margin-top: 14px; }
+.pf-pet-hit:focus-visible { outline: 2px solid var(--gold); outline-offset: 4px; }
+.pf-pet-stage.etapa-1 .pf-pet-hit .pf-sprite { animation: pf-egg-wobble 3.6s ease-in-out infinite; transform-origin: 50% 100%; }
+.pf-pet-stage.mood-radiante .pf-pet-hit .pf-sprite { animation: pf-pet-bob 2.4s ease-in-out infinite; }
+.pf-pet-toggle { display: inline-flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 13px; color: var(--text-muted); cursor: pointer; }
+.pf-pet-toggle input { accent-color: var(--violet); width: 16px; height: 16px; }
+
+.pf-dock { position: fixed; left: 0; bottom: 8px; z-index: 55; pointer-events: none; will-change: transform; }
+.pf-dock-btn { position: relative; display: flex; align-items: flex-end; justify-content: center; width: 100%; background: none; border: none; padding: 0; cursor: pointer; pointer-events: auto; border-radius: 14px; -webkit-tap-highlight-color: transparent; }
+.pf-dock-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+.pf-dock-btn.egg .pf-sprite { animation: pf-egg-wobble 3.6s ease-in-out infinite; transform-origin: 50% 100%; }
+.pf-dock-btn.pose-salto .pf-sprite { animation: pf-dock-jump .85s cubic-bezier(.3,.7,.4,1) both; }
+.pf-dock-btn.pose-feliz .pf-sprite { animation: pf-pet-bob 1.1s ease-in-out infinite; }
+.pf-dock-bubble { position: absolute; bottom: calc(100% + 6px); left: 0; width: max-content; max-width: min(230px, calc(100vw - 24px)); padding: 9px 12px; border-radius: 14px; border-bottom-left-radius: 4px; background: var(--ink-2); border: 1px solid rgba(233,196,106,.55); color: var(--text); font-size: 12.5px; line-height: 1.4; box-shadow: 0 8px 20px rgba(0,0,0,.4), 0 0 16px rgba(139,92,246,.25); pointer-events: auto; animation: pf-fade-up .25s ease both; }
+.pf-dock-bubble.right { left: auto; right: 0; border-bottom-left-radius: 14px; border-bottom-right-radius: 4px; }
+.pf-dock-bubble .pf-link-btn { display: block; margin-top: 6px; font-size: 11.5px; }
+.pf-dock-mini { position: fixed; bottom: 12px; left: 12px; z-index: 55; width: 46px; height: 46px; border-radius: 50%; padding: 0; overflow: hidden; cursor: pointer; background: var(--ink-2); border: 1px solid rgba(233,196,106,.55); box-shadow: 0 6px 18px rgba(0,0,0,.4), 0 0 14px rgba(139,92,246,.3); opacity: .85; transition: opacity .2s ease, transform .15s ease; }
+.pf-dock-mini:hover, .pf-dock-mini:focus-visible { opacity: 1; transform: scale(1.06); }
+.pf-dock-mini img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 28%; display: block; }
+@media (min-width: 900px) { .pf-dock-mini { left: calc(var(--side-w) + 14px); } }
+@keyframes pf-egg-wobble { 0%, 70%, 100% { transform: rotate(0); } 76% { transform: rotate(-5deg); } 84% { transform: rotate(5deg); } 92% { transform: rotate(-3deg); } }
+@keyframes pf-dock-jump { 0% { transform: translateY(0) scale(1.04, .94); } 40% { transform: translateY(-34px) scale(.97, 1.04); } 75% { transform: translateY(-6px); } 100% { transform: translateY(0) scale(1.04, .94); } }
+@media (prefers-reduced-motion: reduce) {
+  .pf-dock-btn .pf-sprite, .pf-pet-hit .pf-sprite { animation: none !important; }
+  .pf-dock-bubble { animation: none; }
+}
+
+
+/* ---------- Panel docente ---------- */
+.pf-adm-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.pf-adm-wrap { overflow: auto; max-height: 68vh; scroll-margin-top: 70px; border: 1px solid rgba(255,255,255,.08); border-radius: 14px; background: rgba(255,255,255,.025); margin-top: 8px; }
+.pf-adm-table { width: 100%; border-collapse: collapse; font-size: 13.5px; min-width: 760px; }
+.pf-adm-table th { text-align: left; padding: 0; border-bottom: 1px solid rgba(255,255,255,.1); background: rgba(8,11,20,.55); position: sticky; top: 0; }
+.pf-adm-th { width: 100%; text-align: left; background: none; border: none; color: var(--gold); font: 600 12px/1.2 inherit; font-family: inherit; letter-spacing: .4px; text-transform: uppercase; padding: 11px 12px; cursor: pointer; }
+.pf-adm-th:hover { color: var(--text); }
+.pf-adm-table td { padding: 9px 12px; border-bottom: 1px solid rgba(255,255,255,.05); vertical-align: middle; }
+.pf-adm-table tbody tr { cursor: pointer; transition: background .15s ease; }
+.pf-adm-table tbody tr:hover, .pf-adm-table tbody tr:focus-visible { background: rgba(139,92,246,.14); outline: none; }
+.pf-adm-table tbody tr.sel { background: rgba(34,211,238,.12); }
+.pf-adm-mail { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pf-adm-det { margin: 10px 0 16px; scroll-margin-top: 70px; }
+.pf-adm-det-grid { display: grid; grid-template-columns: minmax(180px, 280px) 1fr; gap: 20px; margin-top: 14px; align-items: start; }
+.pf-adm-pet { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.pf-adm-badges { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+.pf-adm-badge { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border-radius: 9px; background: rgba(233,196,106,.14); border: 1px solid rgba(233,196,106,.5); font-size: 16px; }
+.pf-adm-badge.off { background: rgba(255,255,255,.04); border-color: rgba(255,255,255,.1); color: var(--text-muted); }
+.pf-adm-mini { width: 100%; font-size: 12.5px; border-collapse: collapse; }
+.pf-adm-mini th, .pf-adm-mini td { text-align: left; padding: 5px 8px; border-bottom: 1px solid rgba(255,255,255,.06); }
+.pf-adm-mini th { color: var(--text-muted); font-weight: 600; }
+.pf-adm-pets { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin-top: 10px; }
+.pf-adm-petcard { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 14px 10px 12px; border-radius: 14px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.09); color: var(--text); font-family: inherit; cursor: pointer; text-align: center; min-height: 190px; justify-content: flex-end; transition: transform .15s ease, border-color .2s ease; }
+.pf-adm-petcard:hover { transform: translateY(-2px); border-color: rgba(34,211,238,.5); }
+.pf-adm-petcard span { font-size: 12px; }
+@media (max-width: 720px) { .pf-adm-det-grid { grid-template-columns: 1fr; } }
+
 `;
 
 /* ============================================================
@@ -2769,7 +2838,7 @@ function askAdmin(value) {
    ============================================================ */
 
 let DV_GOTO = null;
-const SessionCtx = React.createContext({ user: null, perfil: null, cargando: false, error: "", entrar: () => {}, salir: () => {}, vincular: async () => ({ ok: false }), desvincular: async () => {} });
+const SessionCtx = React.createContext({ user: null, perfil: null, esAdmin: false, cargando: false, error: "", entrar: () => {}, salir: () => {}, vincular: async () => ({ ok: false }), desvincular: async () => {} });
 function useSession() { return React.useContext(SessionCtx); }
 const perfilKey = (uid) => "perfil-" + uid;
 const vinculoKey = (cursoId, nombre) => "vinculo-" + cursoId + "-" + String(nombre).replace(/[\/\s.]+/g, "_");
@@ -2784,7 +2853,7 @@ function SessionProvider({ children }) {
     return onAuthStateChanged(auth, async (u) => {
       if (!u) { setUser(null); setPerfil(null); setCargando(false); return; }
       const mail = String(u.email || "").toLowerCase();
-      if (DOMINIO_INSTITUCIONAL && !mail.endsWith("@" + DOMINIO_INSTITUCIONAL.toLowerCase())) {
+      if (DOMINIO_INSTITUCIONAL && !esCorreoAdmin(mail) && !mail.endsWith("@" + DOMINIO_INSTITUCIONAL.toLowerCase())) {
         setError("Usa tu cuenta institucional (@" + DOMINIO_INSTITUCIONAL + "). La cuenta " + (u.email || "") + " no está permitida.");
         try { await signOut(auth); } catch (e) {}
         setUser(null); setPerfil(null); setCargando(false);
@@ -2852,7 +2921,8 @@ function SessionProvider({ children }) {
     setPerfil(null);
   };
 
-  return <SessionCtx.Provider value={{ user, perfil, cargando, error, entrar, salir, vincular, desvincular }}>{children}</SessionCtx.Provider>;
+  const esAdmin = !!(user && esCorreoAdmin(user.email));
+  return <SessionCtx.Provider value={{ user, perfil, esAdmin, cargando, error, entrar, salir, vincular, desvincular }}>{children}</SessionCtx.Provider>;
 }
 
 function IdentityPicker({ cursos, cursoSel, nombreSel, setCursoSel, setNombreSel, onPick }) {
@@ -2908,58 +2978,6 @@ function GoogleG() {
     </svg>
   );
 }
-
-function GestionVinculos() {
-  const [abierto, setAbierto] = useState(false);
-  const [items, setItems] = useState(null);
-  const cargar = async () => {
-    try {
-      const r = await window.storage.list("vinculo-", true);
-      const out = [];
-      for (const k of r.keys) {
-        try {
-          const d = JSON.parse((await window.storage.get(k, true)).value);
-          let email = d.email || "";
-          if (!email && d.uid) { try { email = JSON.parse((await window.storage.get(perfilKey(d.uid), true)).value).email || ""; } catch (e) {} }
-          out.push({ k, ...d, email });
-        } catch (e) {}
-      }
-      out.sort((a, b) => String(a.nombre).localeCompare(String(b.nombre), "es"));
-      setItems(out);
-    } catch (e) { setItems([]); }
-  };
-  const abrir = () => {
-    const pin = window.prompt("Clave del profesor:");
-    if (pin !== TERRAPESOS_EDIT_PIN) return;
-    setAbierto(true);
-    cargar();
-  };
-  const liberar = async (it) => {
-    try {
-      await window.storage.delete(it.k, true);
-      if (it.uid) await window.storage.delete(perfilKey(it.uid), true);
-    } catch (e) {}
-    cargar();
-  };
-  if (!abierto) return <button className="pf-link-btn" style={{ fontSize: 12.5 }} onClick={abrir}>Soy profesor: gestionar vínculos de cuentas</button>;
-  return (
-    <div className="pf-perfil-card" style={{ width: "100%" }}>
-      <h3 className="pf-perfil-h">Cuentas vinculadas</h3>
-      <p className="pf-muted" style={{ fontSize: 12.5, margin: "0 0 10px" }}>«Liberar» desvincula la cuenta de ese nombre; el estudiante podrá vincularse otra vez. Para ver y liberar cuentas debes haber iniciado sesión con el correo del profesor.</p>
-      {items === null ? <p className="pf-muted">Cargando…</p> : items.length === 0 ? <p className="pf-muted">Todavía no hay cuentas vinculadas.</p> : (
-        <div className="pf-vinculos">
-          {items.map((it) => (
-            <div key={it.k} className="pf-vinculo-row">
-              <span><strong>{it.nombre}</strong> <span className="pf-muted" style={{ fontSize: 12 }}>· {it.curso}</span><br /><span className="pf-muted" style={{ fontSize: 12 }}>{it.email}</span></span>
-              <button className="pf-btn pf-btn-secondary" style={{ padding: "6px 12px", fontSize: 12.5 }} onClick={() => liberar(it)}>Liberar</button>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 
 /* ============================================================
    COMPAÑERO (mascota): crece con el nivel del estudiante y su
@@ -3017,23 +3035,82 @@ function CoronaSvg() {
     </svg>
   );
 }
+/* ---------- Sprites animados (carpeta sprites/ junto a index.html) ---------- */
+const SPR_META = {"buho/huevo":{"w":100,"h":127,"pie":4},"buho/cria":{"w":263,"h":260,"pie":2},"buho/joven":{"w":219,"h":256,"pie":2},"buho/adulto":{"w":242,"h":264,"pie":5},"buho/ancestral":{"w":232,"h":262,"pie":2},"zorro/huevo":{"w":100,"h":127,"pie":4},"zorro/cria":{"w":263,"h":260,"pie":2},"zorro/joven":{"w":219,"h":257,"pie":2},"zorro/adulto":{"w":237,"h":251,"pie":2},"zorro/ancestral":{"w":232,"h":262,"pie":2},"lobo/huevo":{"w":100,"h":127,"pie":4},"lobo/cria":{"w":263,"h":260,"pie":2},"lobo/joven":{"w":219,"h":251,"pie":2},"lobo/adulto":{"w":226,"h":246,"pie":2},"lobo/ancestral":{"w":232,"h":262,"pie":2},"cuervo/huevo":{"w":100,"h":127,"pie":4},"cuervo/cria":{"w":263,"h":268,"pie":2},"cuervo/joven":{"w":219,"h":257,"pie":2},"cuervo/adulto":{"w":242,"h":264,"pie":5},"cuervo/ancestral":{"w":232,"h":262,"pie":2}};
+const SPR_FRAMES = ["reposo", "parpadeo", "caminar-1", "caminar-2", "caminar-3", "caminar-4", "salto", "feliz", "comer", "dormir", "hambre", "saludo"];
+const SPR_DIR = { owl: "buho", fox: "zorro", wolf: "lobo", raven: "cuervo" };
+const SPR_ETAPAS = ["huevo", "cria", "joven", "adulto", "ancestral"];
+const SPR_ESCALA = [1, 0.62, 0.78, 0.92, 1];
+const SPR_SEQ = { idle: [0, 0, 0, 0, 0, 1], walk: [2, 3, 4, 5], salto: [6], feliz: [7], comer: [8], dormir: [9], hambre: [10], saludo: [11] };
+function sprUrl(esp, etapa, i) {
+  const n = etapa === 1 ? "01-huevo" : String(i + 1).padStart(2, "0") + "-" + SPR_FRAMES[i];
+  return "sprites/" + SPR_DIR[esp] + "/" + SPR_ETAPAS[etapa - 1] + "/" + n + ".webp";
+}
+function sprDims(esp, etapa, k) {
+  const m = SPR_META[SPR_DIR[esp] + "/" + SPR_ETAPAS[etapa - 1]] || { w: 200, h: 200, pie: 0 };
+  const e = SPR_ESCALA[etapa - 1] * k;
+  return { w: Math.round(m.w * e), h: Math.round(m.h * e), pie: Math.round(m.pie * e) };
+}
+
+function AnimSprite({ esp, etapa, pose, k = 0.5, flip = false }) {
+  const [i, setI] = useState(0);
+  const [roto, setRoto] = useState(false);
+  const seq = etapa === 1 ? [0] : (SPR_SEQ[pose] || SPR_SEQ.idle);
+  useEffect(() => {
+    setI(0);
+    if (seq.length < 2) return;
+    const t = setInterval(() => setI((v) => (v + 1) % seq.length), pose === "walk" ? 130 : 420);
+    return () => clearInterval(t);
+  }, [pose, etapa, esp]);
+  useEffect(() => {
+    setRoto(false);
+    const n = etapa === 1 ? 1 : SPR_FRAMES.length;
+    for (let j = 0; j < n; j++) { const im = new Image(); im.src = sprUrl(esp, etapa, j); }
+  }, [esp, etapa]);
+  const d = sprDims(esp, etapa, k);
+  if (roto) return etapa === 1 ? <HuevoSvg size={d.h} /> : <Sym name={esp} size={Math.round(d.h * 0.8)} className="pf-sprite-fallback" />;
+  return <img className="pf-sprite" src={sprUrl(esp, etapa, seq[i % seq.length])} width={d.w} height={d.h} alt="" draggable="false" onError={() => setRoto(true)} style={{ transform: flip ? "scaleX(-1)" : undefined, marginBottom: -d.pie }} />;
+}
+
+let PET_HIDDEN = (() => { try { return localStorage.getItem("dv_pet_hidden") === "1"; } catch (e) { return false; } })();
+function setPetHidden(v) {
+  PET_HIDDEN = !!v;
+  try { localStorage.setItem("dv_pet_hidden", v ? "1" : "0"); } catch (e) {}
+  window.dispatchEvent(new Event("dv-pet-vis"));
+}
+function usePetHidden() {
+  const [h, setH] = useState(PET_HIDDEN);
+  useEffect(() => {
+    const f = () => setH(PET_HIDDEN);
+    window.addEventListener("dv-pet-vis", f);
+    return () => window.removeEventListener("dv-pet-vis", f);
+  }, []);
+  return h;
+}
+
 function MascotaArte({ especie, etapa, animo }) {
   const esp = ESPECIES.find((e) => e.id === especie) || ESPECIES[0];
-  const size = [0, 84, 72, 98, 124, 148][etapa] || 90;
+  const [temp, setTemp] = useState(null);
+  useEffect(() => {
+    if (animo !== "radiante" || etapa === 1) return;
+    const t = setInterval(() => { setTemp("feliz"); setTimeout(() => setTemp(null), 1500); }, 6500);
+    return () => clearInterval(t);
+  }, [animo, etapa]);
+  const base = animo === "dormido" ? "dormir" : animo === "hambre" ? "hambre" : "idle";
+  const saludar = () => { setTemp("saludo"); setTimeout(() => setTemp(null), 1700); };
   return (
-    <div className={"pf-pet-stage c-" + esp.color + " mood-" + animo + " etapa-" + etapa} role="img" aria-label={esp.nombre + " en etapa " + ETAPAS[etapa - 1]}>
+    <div className={"pf-pet-stage c-" + esp.color + " mood-" + animo + " etapa-" + etapa}>
       <div className="pf-pet-aura" />
-      {etapa >= 4 && <Sym name="stars" size={24} className="pf-pet-orbit o1" />}
-      {etapa >= 5 && <Sym name="stars" size={18} className="pf-pet-orbit o2" />}
-      {etapa === 1 ? <HuevoSvg size={size} /> : <Sym name={esp.id} size={size} className="pf-pet-body" />}
-      {etapa === 5 && <CoronaSvg />}
-      {(animo === "dormido" || animo === "espera") && <span className="pf-pet-z" aria-hidden="true">z<small>z</small><small>z</small></span>}
+      <button className="pf-pet-hit" onClick={saludar} aria-label={"Saludar a tu compañero, " + esp.nombre + " en etapa " + ETAPAS[etapa - 1]}>
+        <AnimSprite esp={esp.id} etapa={etapa} pose={temp || base} k={0.85} />
+      </button>
     </div>
   );
 }
 
 function MascotaCard({ st, nv, xp }) {
   const { user } = useSession();
+  const oculto = usePetHidden();
   const [pet, setPet] = useState(undefined); // undefined = cargando, null = sin mascota
   const [elegida, setElegida] = useState("owl");
   const [nombre, setNombre] = useState("");
@@ -3143,13 +3220,480 @@ function MascotaCard({ st, nv, xp }) {
         <div className="pf-pet-stars" aria-label={insig + " de " + INSIGNIAS.length + " insignias"}>
           {INSIGNIAS.map((b, i) => <Sym key={b.id} name="stars" size={16} className={i < insig ? "on" : "off"} />)}
         </div>
+        <label className="pf-pet-toggle">
+          <input type="checkbox" checked={!oculto} onChange={(e) => setPetHidden(!e.target.checked)} />
+          Mostrar a {pet.nombre} por toda la página
+        </label>
       </div>
     </div>
   );
 }
 
+
+/* ============================================================
+   COMPAÑERO FLOTANTE: acompaña al estudiante en todas las páginas.
+   Camina por el borde inferior, reacciona a los premios y saluda
+   con una frase distinta según la sección. Se puede ocultar.
+   ============================================================ */
+const FRASES_SECCION = {
+  home: "¡Hola! ¿Qué pregunta nos hacemos hoy?",
+  inicio: "¡Hola! ¿Qué pregunta nos hacemos hoy?",
+  cursos: "Elige un curso y sigamos pensando.",
+  curso: "Cada unidad es una puerta a una gran pregunta.",
+  unidad: "Elige un tema y empecemos.",
+  tema: "Léelo con calma y anota tus dudas.",
+  recursos: "Aquí hay materiales para estudiar.",
+  estudio: "Repasar un poco cada día rinde más.",
+  flashcards: "Dale la vuelta a la tarjeta: ¿la recuerdas?",
+  paes: "Practicar hoy es tranquilidad mañana.",
+  biblioteca: "Los libros son conversaciones con el pasado.",
+  autor: "Todo pensador empezó con una duda.",
+  busqueda: "Buscar ya es empezar a saber.",
+  terrapesos: "Aquí se cuentan los terrapesos. ¡Juega para sumar!",
+  juegos: "¡A jugar! Una partida al día me alimenta.",
+  playlist: "¿Qué música acompaña tu pensamiento?",
+  buzon: "Las buenas preguntas siempre son bienvenidas.",
+  calendario: "Revisa las fechas: ¡nada de sorpresas!",
+  sobre: "Esta plataforma se hizo para pensar juntos.",
+};
+
+function CompanionDock({ page }) {
+  const { user, perfil } = useSession();
+  const oculto = usePetHidden();
+  const [pet, setPet] = useState(null);
+  const [st, setSt] = useState(null);
+  const [tick, setTick] = useState(0);
+  const [x, setX] = useState(null);
+  const [dur, setDur] = useState(0);
+  const [pose, setPose] = useState("idle");
+  const [flip, setFlip] = useState(false);
+  const [msg, setMsg] = useState(null);
+  const [vp, setVp] = useState(() => window.innerWidth);
+  const dockRef = React.useRef(null);
+  const R = React.useRef({ x: 0, busy: false, walking: false, animo: "contento", timers: [], mt: 0, last: 0, prevEt: null, quieto: false, dims: { w: 100, h: 100 }, next: () => {} });
+  const reduce = useMemo(() => !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches), []);
+
+  useEffect(() => {
+    if (!user || !perfil) { setPet(null); setSt(null); return; }
+    let vivo = true;
+    (async () => {
+      try { const r = await window.storage.get(mascotaKey(user.uid), true); const m = JSON.parse(r.value); if (vivo) setPet(m); } catch (e) { if (vivo) setPet(null); }
+      const d = await leerLogros(logrosKey(perfil.curso, perfil.nombre));
+      if (vivo) setSt({ ...LOGROS_VACIO(), ...(d || {}) });
+    })();
+    return () => { vivo = false; };
+  }, [user && user.uid, perfil && perfil.nombre, tick, page]);
+
+  useEffect(() => {
+    const f = () => setVp(window.innerWidth);
+    window.addEventListener("resize", f);
+    return () => window.removeEventListener("resize", f);
+  }, []);
+
+  const nv = st ? nivelDeXP(calcXP(st)) : null;
+  const etapa = nv ? etapaDeNivel(nv.actual.n) : 1;
+  const animo = animoMascota(st).id;
+  const esp = pet ? pet.especie : "owl";
+  const movil = vp < 900;
+  const k = movil ? (page === "juegos" ? 0.34 : 0.45) : 0.6;
+  const dims = sprDims(esp, etapa, k);
+  const activa = !!(pet && nv && user && perfil && page !== "perfil");
+  const r = R.current;
+  r.animo = animo; r.dims = dims;
+  r.quieto = reduce || etapa === 1 || (page === "juegos" && movil);
+
+  const zona = () => {
+    const w = window.innerWidth;
+    let min = 8;
+    if (w >= 900) { const sd = document.querySelector(".pf-side"); min = (sd ? sd.getBoundingClientRect().right : 272) + 14; }
+    const max = Math.max(min, w - r.dims.w - (w >= 900 ? 110 : 76));
+    return { min, max };
+  };
+  const limpiar = () => { r.timers.forEach(clearTimeout); r.timers = []; };
+  const programar = (fn, ms) => { const t = setTimeout(fn, ms); r.timers.push(t); return t; };
+  const mostrar = (txt, ms, ocultar) => {
+    clearTimeout(r.mt);
+    setMsg({ txt, ocultar: !!ocultar });
+    r.mt = setTimeout(() => setMsg(null), ms);
+  };
+  const detener = () => {
+    if (r.walking && dockRef.current) {
+      const left = dockRef.current.getBoundingClientRect().left;
+      r.x = left; r.walking = false; setDur(0); setX(left);
+    }
+  };
+  const reaccionar = (pasos) => {
+    limpiar(); detener(); r.busy = true;
+    let t = 0;
+    pasos.forEach((p) => {
+      programar(() => { setPose(p.pose); if (p.msg) mostrar(p.msg, p.msgMs || p.ms, p.ocultar); }, t);
+      t += p.ms;
+    });
+    programar(() => { r.busy = false; setPose("idle"); r.next(); }, t);
+  };
+
+  // posición inicial
+  useEffect(() => {
+    if (!activa) { setX(null); return; }
+    const z = zona();
+    const x0 = r.quieto ? z.min : z.max;
+    r.x = x0; setX(x0);
+  }, [activa, movil]);
+
+  // reajusta si cambia el tamaño de la ventana
+  useEffect(() => {
+    if (!activa || x === null) return;
+    const z = zona();
+    if (r.x > z.max || r.x < z.min) { const nx = Math.min(z.max, Math.max(z.min, r.x)); r.x = nx; setDur(0); setX(nx); }
+  }, [vp]);
+
+  // comportamiento autónomo
+  useEffect(() => {
+    if (!activa) return;
+    r.next = () => {
+      if (r.busy) return;
+      const a = r.animo;
+      if (r.quieto) { setPose(a === "dormido" ? "dormir" : a === "hambre" ? "hambre" : "idle"); programar(r.next, 6000); return; }
+      if (a === "dormido") { setPose("dormir"); programar(r.next, 6000); return; }
+      const caminar = Math.random() < (a === "hambre" ? 0.25 : 0.7);
+      if (!caminar) { setPose(a === "hambre" ? "hambre" : "idle"); programar(r.next, 2500 + Math.random() * 3500); return; }
+      const z = zona();
+      const dest = z.min + Math.random() * (z.max - z.min);
+      const dist = Math.abs(dest - r.x);
+      if (dist < 50) { setPose("idle"); programar(r.next, 1500); return; }
+      const s = dist / (a === "hambre" ? 34 : 58);
+      r.walking = true; setFlip(dest < r.x); setPose("walk"); setDur(s); setX(dest); r.x = dest;
+      programar(() => { r.walking = false; setDur(0); setPose("idle"); programar(r.next, 1200 + Math.random() * 3000); }, s * 1000);
+    };
+    if (!r.busy) programar(r.next, 1500);
+    return () => { limpiar(); r.busy = false; r.walking = false; };
+  }, [activa, etapa, animo, reduce, movil, page === "juegos"]);
+
+  // reacciones a premios y fallos de los juegos
+  useEffect(() => {
+    if (!activa) return;
+    const h = (e) => {
+      const d = e.detail || {};
+      if (d.nombre && perfil && d.nombre !== perfil.nombre) return;
+      setTick((t) => t + 1);
+      if (d.tipo === "premio") {
+        reaccionar(etapa === 1
+          ? [{ pose: "idle", ms: 2600, msg: "¡Ganaste " + d.monto + " terrapesos!" }]
+          : [{ pose: "comer", ms: 1300, msg: "¡Ñam! Eso me da energía.", msgMs: 1300 }, { pose: "salto", ms: 850, msg: "¡Ganaste " + d.monto + " terrapesos!", msgMs: 3600 }, { pose: "feliz", ms: 2200 }]);
+      } else if (d.tipo === "fallo") {
+        reaccionar([{ pose: etapa === 1 ? "idle" : "hambre", ms: 2800, msg: "No pasa nada: mañana lo logramos." }]);
+      }
+    };
+    window.addEventListener("dv-pet", h);
+    return () => window.removeEventListener("dv-pet", h);
+  }, [activa, etapa, perfil && perfil.nombre]);
+
+  // evolución
+  useEffect(() => {
+    if (!activa || !st) return;
+    if (r.prevEt !== null && etapa > r.prevEt) {
+      reaccionar([{ pose: etapa === 1 ? "idle" : "salto", ms: 900, msg: "¡Evolucioné a " + ETAPAS[etapa - 1] + "!", msgMs: 5000 }, { pose: "feliz", ms: 2600 }]);
+    }
+    r.prevEt = etapa;
+  }, [etapa, !!st, activa]);
+
+  // frase al cambiar de sección (con pausa mínima entre frases)
+  useEffect(() => {
+    if (!activa || oculto || !st) return;
+    const ahora = Date.now();
+    if (ahora - r.last < 25000) return;
+    const t = setTimeout(() => {
+      if (r.busy) return;
+      r.last = Date.now();
+      let txt = FRASES_SECCION[page] || FRASES_SECCION.home;
+      try {
+        if (!sessionStorage.getItem("dv_pet_hi")) { sessionStorage.setItem("dv_pet_hi", "1"); txt = "¡Hola, " + String(perfil.nombre).split(" ")[0] + "! Qué bueno verte."; }
+      } catch (e) {}
+      if (r.animo === "dormido") txt = "Zzz… juega una partida y me despiertas.";
+      else if (r.animo === "hambre") txt = "Tengo hambre de ideas… ¿jugamos?";
+      mostrar(txt, 4200, false);
+    }, 1100);
+    return () => clearTimeout(t);
+  }, [page, activa, oculto, !!st]);
+
+  useEffect(() => () => { limpiar(); clearTimeout(r.mt); }, []);
+
+  if (!activa || x === null) return null;
+
+  if (oculto) {
+    return (
+      <button className="pf-dock-mini" onClick={() => setPetHidden(false)} aria-label={"Mostrar a " + pet.nombre} title={"Mostrar a " + pet.nombre}>
+        <img src={sprUrl(esp, etapa, 0)} alt="" />
+      </button>
+    );
+  }
+
+  const alTocar = () => {
+    if (etapa === 1) { reaccionar([{ pose: "idle", ms: 3600, msg: "Aún soy un huevito… ¡ayúdame a crecer jugando!", ocultar: true }]); return; }
+    if (r.animo === "dormido") { reaccionar([{ pose: "saludo", ms: 1700, msg: "¡Me despertaste! ¿Jugamos una partida?", msgMs: 4800, ocultar: true }, { pose: "idle", ms: 3000 }]); return; }
+    reaccionar([{ pose: "saludo", ms: 1600, msg: FRASES_SECCION[page] || FRASES_SECCION.home, msgMs: 4800, ocultar: true }, { pose: "idle", ms: 3200 }]);
+  };
+
+  return (
+    <div className="pf-dock" ref={dockRef} style={{ width: dims.w, transform: "translateX(" + x + "px)", transition: dur ? "transform " + dur + "s linear" : "none" }}>
+      {msg && (
+        <div className={"pf-dock-bubble" + (x > vp / 2 ? " right" : "")} role="status" aria-live="polite">
+          {msg.txt}
+          {msg.ocultar && <button className="pf-link-btn" onClick={() => setPetHidden(true)}>Ocultar compañero</button>}
+        </div>
+      )}
+      <button className={"pf-dock-btn pose-" + pose + (etapa === 1 ? " egg" : "")} onClick={alTocar} aria-label={"Tu compañero " + pet.nombre + ". Tócalo para que te salude."}>
+        <AnimSprite esp={esp} etapa={etapa} pose={pose} k={k} flip={flip} />
+      </button>
+    </div>
+  );
+}
+
+
+/* ============================================================
+   PANEL DOCENTE (solo para los correos de ADMIN_EMAILS)
+   Lista de estudiantes con sus datos, cuenta vinculada, logros y
+   mascota. Lee la colección compartida completa: las reglas de
+   Firestore solo lo permiten al profesor.
+   ============================================================ */
+const JUEGO_NOMBRE = { snake: "Snake", wordle: "Palabra del día", color: "Color", pregunta: "Pregunta del día", capitales: "Capitales", password: "Contraseña" };
+const numTP = (p) => parseInt(String(p).replace(/[.\s]/g, ""), 10) || 0;
+function fechaCorta(k) { if (!k) return "—"; const [y, m, d] = String(k).split("-"); return d + "/" + m; }
+
+function AdminPanel({ tpData, nav }) {
+  const { user, esAdmin, cargando, entrar, salir } = useSession();
+  const [datos, setDatos] = useState(null);
+  const [error, setError] = useState("");
+  const [tab, setTab] = useState("estudiantes");
+  const [curso, setCurso] = useState("todos");
+  const [q, setQ] = useState("");
+  const [orden, setOrden] = useState({ k: "nombre", dir: 1 });
+  const [selId, setSelId] = useState(null);
+  const [aviso, setAviso] = useState("");
+  const detRef = React.useRef(null);
+  useEffect(() => { if (selId && detRef.current) detRef.current.scrollIntoView({ behavior: "smooth", block: "start" }); }, [selId]);
+
+  const cargar = async () => {
+    setDatos(null); setError("");
+    try {
+      if (!window.storage.dump) throw new Error("sin lectura masiva");
+      setDatos(await window.storage.dump());
+    } catch (e) {
+      setError("No se pudieron leer los datos. Revisa que las reglas de Firestore estén publicadas con tu correo de profesor.");
+      setDatos({});
+    }
+  };
+  useEffect(() => { if (esAdmin) cargar(); }, [esAdmin]);
+
+  const filas = useMemo(() => {
+    if (!datos) return [];
+    const J = (k) => { try { return datos[k] ? JSON.parse(datos[k]) : null; } catch (e) { return null; } };
+    const out = [];
+    (tpData.estudiantesPorCurso || []).forEach((c) => (c.estudiantes || []).forEach((e) => {
+      const st = { ...LOGROS_VACIO(), ...(J(logrosKey(c.id, e.label)) || {}) };
+      const v = J(vinculoKey(c.id, e.label));
+      const uid = v && v.uid ? v.uid : "";
+      const perfil = uid ? J(perfilKey(uid)) : null;
+      const pet = uid ? J(mascotaKey(uid)) : null;
+      const xp = calcXP(st);
+      const nv = nivelDeXP(xp);
+      out.push({
+        id: c.id + "|" + e.label, curso: c.id, cursoNombre: c.nombre, nombre: e.label,
+        saldo: numTP(e.price), saldoTxt: e.price, st, xp, nv, nivel: nv.actual.n, racha: rachaVigente(st),
+        ultimo: st.ultimoDia || "", insignias: (st.insignias || []).length,
+        uid, email: (perfil && perfil.email) || "", pet, etapa: etapaDeNivel(nv.actual.n),
+      });
+    }));
+    return out;
+  }, [datos, tpData]);
+
+  const visibles = useMemo(() => {
+    const t = q.trim().toLowerCase();
+    const f = filas.filter((r) => (curso === "todos" || r.curso === curso) && (!t || (r.nombre + " " + r.email + " " + (r.pet ? r.pet.nombre : "")).toLowerCase().includes(t)));
+    const k = orden.k;
+    return f.sort((a, b) => {
+      const va = k === "email" ? a.email : k === "mascota" ? (a.pet ? a.pet.nombre : "") : a[k];
+      const vb = k === "email" ? b.email : k === "mascota" ? (b.pet ? b.pet.nombre : "") : b[k];
+      if (typeof va === "number" && typeof vb === "number") return (va - vb) * orden.dir;
+      return String(va).localeCompare(String(vb), "es") * orden.dir;
+    });
+  }, [filas, curso, q, orden]);
+
+  const hoy = todayKey();
+  const resumen = {
+    total: visibles.length,
+    vinculados: visibles.filter((r) => r.email).length,
+    mascotas: visibles.filter((r) => r.pet).length,
+    activos: visibles.filter((r) => r.ultimo === hoy).length,
+    terrapesos: visibles.reduce((a, r) => a + r.saldo, 0),
+  };
+  const sel = filas.find((r) => r.id === selId) || null;
+
+  const ord = (k) => setOrden((o) => (o.k === k ? { k, dir: -o.dir } : { k, dir: k === "nombre" || k === "email" || k === "mascota" ? 1 : -1 }));
+  const Th = ({ k, children }) => (
+    <th scope="col" aria-sort={orden.k === k ? (orden.dir > 0 ? "ascending" : "descending") : "none"}>
+      <button className="pf-adm-th" onClick={() => ord(k)}>{children}{orden.k === k ? (orden.dir > 0 ? " ▲" : " ▼") : ""}</button>
+    </th>
+  );
+
+  const exportar = () => {
+    const cab = ["Estudiante", "Curso", "Terrapesos", "Nivel", "XP", "Racha", "Mejor racha", "Insignias", "Ganado jugando", "Última actividad", "Correo", "Mascota", "Especie", "Etapa"];
+    const esc = (v) => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
+    const lineas = [cab.map(esc).join(",")].concat(visibles.map((r) => [r.nombre, r.cursoNombre, r.saldo, r.nivel, r.xp, r.racha, r.st.mejorRacha || 0, r.insignias, r.st.totalGanado || 0, r.ultimo, r.email, r.pet ? r.pet.nombre : "", r.pet ? r.pet.especie : "", r.pet ? ETAPAS[r.etapa - 1] : ""].map(esc).join(",")));
+    const blob = new Blob(["﻿" + lineas.join("\n")], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = "estudiantes_deusivenatura_" + hoy + ".csv";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  };
+
+  const hacer = async (texto, fn) => {
+    if (!window.confirm(texto)) return;
+    try { await fn(); setAviso("Listo."); } catch (e) { setAviso("No se pudo completar la acción."); }
+    await cargar();
+  };
+  const liberar = (r) => hacer("¿Liberar la cuenta de " + r.nombre + "? Podrá vincularse de nuevo.", async () => {
+    await window.storage.delete(vinculoKey(r.curso, r.nombre), true);
+    if (r.uid) await window.storage.delete(perfilKey(r.uid), true);
+  });
+  const reiniciarMascota = (r) => hacer("¿Reiniciar la mascota de " + r.nombre + "? Tendrá que adoptar una nueva.", async () => { await window.storage.delete(mascotaKey(r.uid), true); });
+  const reiniciarLogros = (r) => hacer("¿Borrar los logros, racha e insignias de " + r.nombre + "? No se puede deshacer.", async () => { await window.storage.set(logrosKey(r.curso, r.nombre), JSON.stringify(LOGROS_VACIO()), true); });
+
+  const cab = (
+    <div className="pf-section-head">
+      <div>
+        <h2>Panel docente</h2>
+        <p>Estudiantes, cuentas vinculadas, logros y mascotas, en un solo lugar.</p>
+      </div>
+    </div>
+  );
+
+  if (cargando) return <div className="pf-container pf-section" style={{ paddingTop: 44 }}>{cab}<p className="pf-muted">Cargando…</p></div>;
+  if (!esAdmin) {
+    return (
+      <div className="pf-container pf-section" style={{ paddingTop: 44 }}>
+        {cab}
+        <div className="pf-perfil-card pf-perfil-login">
+          <h3 className="pf-perfil-h">Solo para el profesor</h3>
+          <p className="pf-muted" style={{ margin: 0 }}>{user ? "La cuenta " + user.email + " no tiene acceso al panel docente." : "Inicia sesión con tu correo de profesor para ver el panel."}</p>
+          {!user ? <button className="pf-btn-google" onClick={entrar}><GoogleG /> Continuar con Google</button> : <button className="pf-btn pf-btn-secondary" onClick={salir}><LogOut size={15} /> Cerrar sesión</button>}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="pf-container pf-section" style={{ paddingTop: 44 }}>
+      {cab}
+      <div className="pf-adm-bar">
+        <div className="pf-chip-row">
+          <button className="pf-chip" style={{ cursor: "pointer", ...(curso === "todos" ? { background: "var(--gold-soft)", color: "var(--ink)", borderColor: "var(--gold-soft)", fontWeight: 600 } : {}) }} onClick={() => setCurso("todos")}>Todos</button>
+          {(tpData.estudiantesPorCurso || []).map((c) => (
+            <button key={c.id} className="pf-chip" style={{ cursor: "pointer", ...(curso === c.id ? { background: "var(--gold-soft)", color: "var(--ink)", borderColor: "var(--gold-soft)", fontWeight: 600 } : {}) }} onClick={() => setCurso(c.id)}>{c.nombre}</button>
+          ))}
+        </div>
+        <input className="pf-input" style={{ maxWidth: 260 }} placeholder="Buscar nombre, correo o mascota…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Buscar" />
+        <button className="pf-btn pf-btn-secondary" style={{ padding: "8px 14px", fontSize: 13 }} onClick={cargar}>Actualizar</button>
+        <button className="pf-btn pf-btn-secondary" style={{ padding: "8px 14px", fontSize: 13 }} onClick={exportar} disabled={!visibles.length}>Exportar CSV</button>
+      </div>
+      {error && <p className="pf-perfil-error" role="alert">{error}</p>}
+      {aviso && <p className="pf-muted" role="status" style={{ fontSize: 13 }}>{aviso}</p>}
+
+      <div className="pf-streak-row" style={{ margin: "14px 0" }}>
+        <div className="pf-streak-box"><div className="pf-streak-num">{resumen.total}</div><div className="pf-streak-lbl">Estudiantes</div></div>
+        <div className="pf-streak-box"><div className="pf-streak-num">{resumen.vinculados}</div><div className="pf-streak-lbl">Con cuenta vinculada</div></div>
+        <div className="pf-streak-box"><div className="pf-streak-num">{resumen.mascotas}</div><div className="pf-streak-lbl">Con mascota</div></div>
+        <div className="pf-streak-box"><div className="pf-streak-num">{resumen.activos}</div><div className="pf-streak-lbl">Jugaron hoy</div></div>
+        <div className="pf-streak-box"><div className="pf-streak-num">{resumen.terrapesos.toLocaleString("es-CL")}</div><div className="pf-streak-lbl">Terrapesos en el curso</div></div>
+      </div>
+
+      <div className="pf-tabs">
+        <button className={"pf-tab" + (tab === "estudiantes" ? " active" : "")} onClick={() => setTab("estudiantes")}>Estudiantes</button>
+        <button className={"pf-tab" + (tab === "mascotas" ? " active" : "")} onClick={() => setTab("mascotas")}>Mascotas</button>
+      </div>
+
+      {datos === null && <p className="pf-muted">Cargando datos…</p>}
+
+      {sel && (
+        <div className="pf-perfil-card pf-adm-det" ref={detRef} tabIndex={-1}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+            <div>
+              <h3 className="pf-perfil-h" style={{ margin: 0 }}>{sel.nombre}</h3>
+              <div className="pf-muted" style={{ fontSize: 13 }}>{sel.cursoNombre} · {sel.email || "sin cuenta vinculada"}</div>
+            </div>
+            <button className="pf-btn pf-btn-secondary" style={{ padding: "6px 12px", fontSize: 13 }} onClick={() => setSelId(null)}>Cerrar</button>
+          </div>
+          <div className="pf-adm-det-grid">
+            <div>
+              {sel.pet ? (
+                <div className="pf-adm-pet">
+                  <AnimSprite esp={sel.pet.especie} etapa={sel.etapa} pose={animoMascota(sel.st).id === "dormido" ? "dormir" : animoMascota(sel.st).id === "hambre" ? "hambre" : "idle"} k={0.6} />
+                  <div><strong>{sel.pet.nombre}</strong><div className="pf-muted" style={{ fontSize: 12.5 }}>{(ESPECIES.find((e) => e.id === sel.pet.especie) || ESPECIES[0]).nombre} · {ETAPAS[sel.etapa - 1]}<br />Ánimo: {animoMascota(sel.st).txt}</div></div>
+                </div>
+              ) : <p className="pf-muted" style={{ fontSize: 13 }}>{sel.uid ? "Aún no adopta una mascota." : "Sin cuenta, sin mascota."}</p>}
+            </div>
+            <div>
+              <div className="pf-level-name" style={{ fontSize: 17 }}>Nivel {sel.nv.actual.n} · {sel.nv.actual.nombre}</div>
+              <div className="pf-mission-bar" style={{ margin: "6px 0" }}><div className="pf-mission-bar-fill" style={{ width: sel.nv.progreso + "%" }} /></div>
+              <div className="pf-streak-lbl" style={{ textAlign: "left" }}>{sel.xp} XP · racha {sel.racha} (mejor {sel.st.mejorRacha || 0}) · {sel.saldoTxt} terrapesos · {(sel.st.totalGanado || 0).toLocaleString("es-CL")} ganados jugando</div>
+              <div className="pf-adm-badges">{INSIGNIAS.map((b) => <span key={b.id} className={"pf-adm-badge" + ((sel.st.insignias || []).includes(b.id) ? "" : " off")} title={b.nombre + ": " + b.desc}>{(sel.st.insignias || []).includes(b.id) ? b.emoji : "·"}</span>)}</div>
+              <table className="pf-adm-mini"><thead><tr><th>Juego</th><th>Jugadas</th><th>Victorias</th></tr></thead><tbody>
+                {Object.keys(sel.st.porJuego || {}).length === 0 ? <tr><td colSpan="3" className="pf-muted">Todavía no juega.</td></tr> : Object.entries(sel.st.porJuego).map(([g, v]) => <tr key={g}><td>{JUEGO_NOMBRE[g] || g}</td><td>{v.jugadas || 0}</td><td>{v.victorias || 0}</td></tr>)}
+              </tbody></table>
+            </div>
+          </div>
+          <div className="pf-btn-row" style={{ marginTop: 12 }}>
+            {sel.uid && <button className="pf-btn pf-btn-secondary" onClick={() => liberar(sel)}>Liberar cuenta</button>}
+            {sel.pet && <button className="pf-btn pf-btn-secondary" onClick={() => reiniciarMascota(sel)}>Reiniciar mascota</button>}
+            <button className="pf-btn pf-btn-secondary" onClick={() => reiniciarLogros(sel)}>Reiniciar logros</button>
+          </div>
+        </div>
+      )}
+
+      {datos !== null && tab === "estudiantes" && (
+        <div className="pf-adm-wrap">
+          <table className="pf-adm-table">
+            <thead><tr>
+              <Th k="nombre">Estudiante</Th><Th k="saldo">Terrapesos</Th><Th k="nivel">Nivel</Th><Th k="racha">Racha</Th><Th k="insignias">Insignias</Th><Th k="ultimo">Última vez</Th><Th k="email">Cuenta</Th><Th k="mascota">Mascota</Th>
+            </tr></thead>
+            <tbody>
+              {visibles.length === 0 && <tr><td colSpan="8" className="pf-muted" style={{ padding: 16 }}>No hay estudiantes que coincidan.</td></tr>}
+              {visibles.map((r) => (
+                <tr key={r.id} className={selId === r.id ? "sel" : ""} onClick={() => setSelId(r.id)} tabIndex={0} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), setSelId(r.id))}>
+                  <td><strong>{r.nombre}</strong>{curso === "todos" && <div className="pf-muted" style={{ fontSize: 11.5 }}>{r.cursoNombre}</div>}</td>
+                  <td>{r.saldoTxt}</td><td>{r.nivel}</td><td>{r.racha}</td><td>{r.insignias}/{INSIGNIAS.length}</td>
+                  <td>{r.ultimo === hoy ? "hoy" : fechaCorta(r.ultimo)}</td>
+                  <td className="pf-adm-mail">{r.email || <span className="pf-muted">—</span>}</td>
+                  <td>{r.pet ? r.pet.nombre + " · " + (ESPECIES.find((e) => e.id === r.pet.especie) || ESPECIES[0]).nombre : <span className="pf-muted">—</span>}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {datos !== null && tab === "mascotas" && (
+        <>
+          <div className="pf-adm-pets">
+            {visibles.filter((r) => r.pet).sort((a, b) => b.etapa - a.etapa || a.nombre.localeCompare(b.nombre, "es")).map((r) => (
+              <button key={r.id} className="pf-adm-petcard" onClick={() => setSelId(r.id)}>
+                <AnimSprite esp={r.pet.especie} etapa={r.etapa} pose={animoMascota(r.st).id === "dormido" ? "dormir" : animoMascota(r.st).id === "hambre" ? "hambre" : "idle"} k={0.4} />
+                <strong>{r.pet.nombre}</strong>
+                <span>{ETAPAS[r.etapa - 1]} · nivel {r.nivel}</span>
+                <span className="pf-muted">{r.nombre}</span>
+              </button>
+            ))}
+          </div>
+          {visibles.filter((r) => r.pet).length === 0 && <p className="pf-muted">Todavía nadie adopta una mascota.</p>}
+          {visibles.filter((r) => r.uid && !r.pet).length > 0 && <p className="pf-muted" style={{ fontSize: 13 }}>Con cuenta pero sin mascota: {visibles.filter((r) => r.uid && !r.pet).map((r) => r.nombre.split(" ")[0]).join(", ")}.</p>}
+        </>
+      )}
+    </div>
+  );
+}
+
 function PerfilPage({ tpData, nav }) {
-  const { user, perfil, cargando, error, entrar, salir, vincular, desvincular } = useSession();
+  const { user, perfil, esAdmin, cargando, error, entrar, salir, vincular, desvincular } = useSession();
   const [cursoSel, setCursoSel] = useState("");
   const [nombreSel, setNombreSel] = useState("");
   const [msg, setMsg] = useState("");
@@ -3207,7 +3751,6 @@ function PerfilPage({ tpData, nav }) {
           {DOMINIO_INSTITUCIONAL && <p className="pf-muted" style={{ fontSize: 12.5, margin: 0 }}>Usa tu correo @{DOMINIO_INSTITUCIONAL}</p>}
           {error && <p className="pf-perfil-error" role="alert">{error}</p>}
         </div>
-        <div style={{ marginTop: 18 }}><GestionVinculos /></div>
       </div>
     );
   }
@@ -3222,6 +3765,23 @@ function PerfilPage({ tpData, nav }) {
       <button className="pf-btn pf-btn-secondary" style={{ padding: "8px 14px", fontSize: 13 }} onClick={salir}><LogOut size={15} /> Cerrar sesión</button>
     </div>
   );
+
+  if (esAdmin && !perfil) {
+    return (
+      <div className="pf-container pf-section" style={{ paddingTop: 44 }}>
+        {cabecera}
+        <div className="pf-perfil-card">
+          {cab}
+          <h3 className="pf-perfil-h" style={{ marginTop: 18 }}>Sesión de profesor</h3>
+          <p className="pf-muted" style={{ fontSize: 13.5, marginTop: 0 }}>Desde el panel docente ves a cada estudiante, su cuenta vinculada, sus logros y su mascota.</p>
+          <div className="pf-btn-row">
+            <button className="pf-btn pf-btn-primary" onClick={() => nav("admin")}><ShieldCheck size={16} /> Abrir panel docente</button>
+            <button className="pf-btn pf-btn-secondary" onClick={() => nav("juegos")}>Ir a los juegos</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!perfil) {
     return (
@@ -3247,7 +3807,6 @@ function PerfilPage({ tpData, nav }) {
           </div>
           {msg && <p className="pf-perfil-error" role="alert">{msg}</p>}
         </div>
-        <div style={{ marginTop: 18 }}><GestionVinculos /></div>
       </div>
     );
   }
@@ -3310,7 +3869,6 @@ function PerfilPage({ tpData, nav }) {
         <button className="pf-btn pf-btn-secondary" onClick={() => nav("terrapesos")}>Ver Terrapesos</button>
         <a className="pf-btn pf-btn-secondary" href={FILOSOFOS_URL} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>Jugar Filocaptura</a>
       </div>
-      <div style={{ marginTop: 22 }}><GestionVinculos /></div>
     </div>
   );
 }
@@ -4736,6 +5294,7 @@ async function registrarActividad(cursoId, nombre, juegoId, gano, monto) {
 async function registrarFallo(cursoId, nombre, juegoId) {
   const rec = await registrarActividad(cursoId, nombre, juegoId, false, 0);
   if (rec && (rec.nuevas.length || rec.nivelNuevo || rec.misionesCompletas)) celebrar({ monto: 0, racha: rec.racha, nuevas: rec.nuevas, nivelNuevo: rec.nivelNuevo, misiones: rec.misionesCompletas });
+  if (nombre !== ADMIN_NAME) window.dispatchEvent(new CustomEvent("dv-pet", { detail: { tipo: "fallo", nombre } }));
 }
 
 const CONFETI_COLORES = ["#FFC93C", "#FF6B8B", "#4ADE80", "#38BDF8", "#A78BFA", "#FB923C"];
@@ -5364,6 +5923,7 @@ function PlataformaFilosofia() {
     const rec = await registrarActividad(cursoId, nombre, juegoId || "juego", true, amount);
     celebrar({ monto: amount, racha: rec ? rec.racha : 0, nuevas: rec ? rec.nuevas : [], nivelNuevo: rec ? rec.nivelNuevo : null, misiones: rec ? rec.misionesCompletas : false });
     if (nombre === ADMIN_NAME) return;
+    window.dispatchEvent(new CustomEvent("dv-pet", { detail: { tipo: "premio", monto: amount, nombre } }));
     try {
       const res = await window.storage.get(TERRAPESOS_STORAGE_KEY, true);
       const latest = res && res.value ? { ...TERRAPESOS_DEFAULT, ...JSON.parse(res.value) } : tpData;
@@ -5463,6 +6023,12 @@ function PlataformaFilosofia() {
             <span className="pf-nav-ico">{sesion.user && sesion.user.foto ? <img className="pf-avatar-mini" src={sesion.user.foto} alt="" referrerPolicy="no-referrer" /> : (sesion.user ? <User size={18} /> : <LogIn size={18} />)}</span>
             <span className="pf-nav-label">{sesion.user ? ((sesion.perfil ? sesion.perfil.nombre : sesion.user.nombre) || "Mi perfil").split(" ")[0] : "Ingresar"}</span>
           </button>
+          {sesion.esAdmin && (
+            <button title="Panel docente" className={"pf-nav-link" + (view.page === "admin" ? " active" : "")} aria-current={view.page === "admin" ? "page" : undefined} onClick={() => { nav("admin"); setMobileOpen(false); }}>
+              <span className="pf-nav-ico"><ShieldCheck size={18} /></span>
+              <span className="pf-nav-label">Panel docente</span>
+            </button>
+          )}
         </div>
         <div className="pf-side-foot">
           <span className="pf-side-note">Deus sive natura</span>
@@ -6886,12 +7452,13 @@ function PlataformaFilosofia() {
         <Nav />
         <SearchOverlay />
         <div key={view.page + (view.cursoKey || "") + (view.unidadId || "") + (view.temaId || "") + (view.autorId || "")} className="pf-page-enter">
-          {view.page === "juegos" ? <Juegos tpData={tpData} claimGameReward={claimGameReward} /> : view.page === "perfil" ? <PerfilPage tpData={tpData} nav={nav} /> : <Page />}
+          {view.page === "juegos" ? <Juegos tpData={tpData} claimGameReward={claimGameReward} /> : view.page === "perfil" ? <PerfilPage tpData={tpData} nav={nav} /> : view.page === "admin" ? <AdminPanel tpData={tpData} nav={nav} /> : <Page />}
         </div>
         <button className="pf-buzon-fab" onClick={() => nav("buzon")} aria-label="Ir al buzón de preguntas y sugerencias" title="Buzón de preguntas y sugerencias">
           <img src={IMG.buzonIcon} alt="" />
         </button>
         <Spinozito />
+        <CompanionDock page={view.page} />
         <BookEasterEgg />
         <CelebrationLayer />
         {toast && (
