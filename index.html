@@ -2513,6 +2513,21 @@ footer.pf-footer { border-top: 1px solid rgba(139,92,246,0.15); margin-top: 20px
 .pf-adm-petcard span { font-size: 12px; }
 @media (max-width: 720px) { .pf-adm-det-grid { grid-template-columns: 1fr; } }
 
+
+/* ---------- Invitación a adoptar ---------- */
+.pf-nudge { position: fixed; bottom: 70px; left: 12px; z-index: 55; display: flex; gap: 12px; align-items: center; max-width: min(350px, calc(100vw - 100px)); padding: 12px 14px; border-radius: 16px; background: var(--ink-2); border: 1px solid rgba(233,196,106,.55); box-shadow: 0 10px 28px rgba(0,0,0,.45), 0 0 22px rgba(139,92,246,.28); animation: pf-fade-up .3s ease both; }
+.pf-nudge-egg { flex: none; transform-origin: 50% 100%; animation: pf-egg-wobble 3.6s ease-in-out infinite; filter: drop-shadow(0 4px 8px rgba(0,0,0,.45)); }
+.pf-nudge-txt strong { display: block; font-family: 'Cormorant Garamond', serif; font-size: 18px; color: var(--gold); line-height: 1.15; }
+.pf-nudge-txt p { margin: 4px 0 8px; font-size: 12.5px; line-height: 1.4; color: var(--text-muted); }
+.pf-nudge-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.pf-nudge-btns .pf-btn { padding: 6px 12px; font-size: 12.5px; }
+.pf-nudge-mini { border-color: var(--gold); animation: pf-nudge-pulse 2.8s ease-in-out infinite; }
+.pf-nudge-mini img { object-fit: contain; padding: 5px 7px; }
+@keyframes pf-nudge-pulse { 0%, 100% { box-shadow: 0 6px 18px rgba(0,0,0,.4), 0 0 8px rgba(233,196,106,.3); } 50% { box-shadow: 0 6px 18px rgba(0,0,0,.4), 0 0 20px rgba(233,196,106,.75); } }
+@media (min-width: 900px) { .pf-nudge { bottom: 14px; left: calc(var(--side-w) + 14px); } }
+@media (max-width: 899px) { .pf-dock-mini { left: 68px; } }
+@media (prefers-reduced-motion: reduce) { .pf-nudge, .pf-nudge-egg, .pf-nudge-mini { animation: none !important; } }
+
 `;
 
 /* ============================================================
@@ -3036,17 +3051,19 @@ function CoronaSvg() {
   );
 }
 /* ---------- Sprites animados (carpeta sprites/ junto a index.html) ---------- */
-const SPR_META = {"buho/huevo":{"w":100,"h":127,"pie":4},"buho/cria":{"w":263,"h":260,"pie":2},"buho/joven":{"w":219,"h":256,"pie":2},"buho/adulto":{"w":242,"h":264,"pie":5},"buho/ancestral":{"w":232,"h":262,"pie":2},"zorro/huevo":{"w":100,"h":127,"pie":4},"zorro/cria":{"w":263,"h":260,"pie":2},"zorro/joven":{"w":219,"h":257,"pie":2},"zorro/adulto":{"w":237,"h":251,"pie":2},"zorro/ancestral":{"w":232,"h":262,"pie":2},"lobo/huevo":{"w":100,"h":127,"pie":4},"lobo/cria":{"w":263,"h":260,"pie":2},"lobo/joven":{"w":219,"h":251,"pie":2},"lobo/adulto":{"w":226,"h":246,"pie":2},"lobo/ancestral":{"w":232,"h":262,"pie":2},"cuervo/huevo":{"w":100,"h":127,"pie":4},"cuervo/cria":{"w":263,"h":268,"pie":2},"cuervo/joven":{"w":219,"h":257,"pie":2},"cuervo/adulto":{"w":242,"h":264,"pie":5},"cuervo/ancestral":{"w":232,"h":262,"pie":2}};
+const SPR_META = {"buho/huevo":{"w":100,"h":127,"pie":4},"buho/cria":{"w":263,"h":260,"pie":2},"buho/joven":{"w":219,"h":256,"pie":2},"buho/adulto":{"w":242,"h":264,"pie":5},"buho/ancestral":{"w":232,"h":262,"pie":2},"zorro/huevo":{"w":100,"h":127,"pie":4},"zorro/cria":{"w":263,"h":260,"pie":2},"zorro/joven":{"w":219,"h":257,"pie":2},"zorro/adulto":{"w":237,"h":251,"pie":2},"zorro/ancestral":{"w":232,"h":262,"pie":2},"lobo/huevo":{"w":100,"h":127,"pie":4},"lobo/cria":{"w":263,"h":260,"pie":2},"lobo/joven":{"w":219,"h":251,"pie":2},"lobo/adulto":{"w":226,"h":246,"pie":2},"lobo/ancestral":{"w":232,"h":262,"pie":2},"cuervo/huevo":{"w":100,"h":127,"pie":4},"cuervo/cria":{"w":263,"h":268,"pie":2},"cuervo/joven":{"w":219,"h":257,"pie":2},"cuervo/adulto":{"w":242,"h":264,"pie":5},"cuervo/ancestral":{"w":232,"h":262,"pie":2},"perro/unico":{"w":219,"h":243,"pie":2}};
 const SPR_FRAMES = ["reposo", "parpadeo", "caminar-1", "caminar-2", "caminar-3", "caminar-4", "salto", "feliz", "comer", "dormir", "hambre", "saludo"];
 const SPR_DIR = { owl: "buho", fox: "zorro", wolf: "lobo", raven: "cuervo" };
 const SPR_ETAPAS = ["huevo", "cria", "joven", "adulto", "ancestral"];
 const SPR_ESCALA = [1, 0.62, 0.78, 0.92, 1];
 const SPR_SEQ = { idle: [0, 0, 0, 0, 0, 1], walk: [2, 3, 4, 5], salto: [6], feliz: [7], comer: [8], dormir: [9], hambre: [10], saludo: [11] };
 function sprUrl(esp, etapa, i) {
+  if (esp === "dog") return "sprites/perro/unico/" + String(i + 1).padStart(2, "0") + "-" + SPR_FRAMES[i] + ".webp";
   const n = etapa === 1 ? "01-huevo" : String(i + 1).padStart(2, "0") + "-" + SPR_FRAMES[i];
   return "sprites/" + SPR_DIR[esp] + "/" + SPR_ETAPAS[etapa - 1] + "/" + n + ".webp";
 }
 function sprDims(esp, etapa, k) {
+  if (esp === "dog") { const d = SPR_META["perro/unico"]; return { w: Math.round(d.w * k), h: Math.round(d.h * k), pie: Math.round(d.pie * k) }; }
   const m = SPR_META[SPR_DIR[esp] + "/" + SPR_ETAPAS[etapa - 1]] || { w: 200, h: 200, pie: 0 };
   const e = SPR_ESCALA[etapa - 1] * k;
   return { w: Math.round(m.w * e), h: Math.round(m.h * e), pie: Math.round(m.pie * e) };
@@ -3068,7 +3085,7 @@ function AnimSprite({ esp, etapa, pose, k = 0.5, flip = false }) {
     for (let j = 0; j < n; j++) { const im = new Image(); im.src = sprUrl(esp, etapa, j); }
   }, [esp, etapa]);
   const d = sprDims(esp, etapa, k);
-  if (roto) return etapa === 1 ? <HuevoSvg size={d.h} /> : <Sym name={esp} size={Math.round(d.h * 0.8)} className="pf-sprite-fallback" />;
+  if (roto) return etapa === 1 ? <HuevoSvg size={d.h} /> : <Sym name={esp === "dog" ? "wolf" : esp} size={Math.round(d.h * 0.8)} className="pf-sprite-fallback" />;
   return <img className="pf-sprite" src={sprUrl(esp, etapa, seq[i % seq.length])} width={d.w} height={d.h} alt="" draggable="false" onError={() => setRoto(true)} style={{ transform: flip ? "scaleX(-1)" : undefined, marginBottom: -d.pie }} />;
 }
 
@@ -3257,10 +3274,77 @@ const FRASES_SECCION = {
   sobre: "Esta plataforma se hizo para pensar juntos.",
 };
 
-function CompanionDock({ page }) {
-  const { user, perfil } = useSession();
+
+/* Compañero exclusivo del profesor: un perrito (sin evolución) */
+const DOG_NOMBRE = "Sócrates";
+const DOG_FRASES = {
+  home: "¡Buen día, profe! ¿Qué pregunta lanzamos hoy?",
+  cursos: "Aquí están tus cursos, profe.",
+  curso: "Cada unidad, una buena pregunta.",
+  unidad: "¿Qué tema toca hoy, profe?",
+  tema: "Un buen tema para conversar en clase.",
+  juegos: "Los chicos juegan… ¡y yo vigilo los terrapesos!",
+  terrapesos: "Aquí se cuentan los terrapesos, profe.",
+  admin: "Este es tu panel, profe. Todo en orden.",
+  buzon: "¿Habrá preguntas nuevas en el buzón?",
+  calendario: "Revisemos las fechas de evaluaciones.",
+};
+let DOG_CACHE = null;
+async function dogResumen() {
+  if (DOG_CACHE && Date.now() - DOG_CACHE.t < 600000) return DOG_CACHE;
+  let ultimo = null, hoyN = 0; const hoy = todayKey();
+  try {
+    const d = await window.storage.dump();
+    Object.keys(d || {}).forEach((k) => {
+      if (k.indexOf("logros-") !== 0) return;
+      try { const u = JSON.parse(d[k]).ultimoDia; if (u && (!ultimo || u > ultimo)) ultimo = u; if (u === hoy) hoyN++; } catch (e) {}
+    });
+  } catch (e) {}
+  DOG_CACHE = { t: Date.now(), ultimo, hoyN };
+  return DOG_CACHE;
+}
+
+/* Invitación a adoptar la mascota (para quien ya tiene cuenta pero aún no adopta) */
+const NUDGE_HUEVOS = ["buho", "zorro", "lobo", "cuervo"];
+function AdoptNudge({ onAdopt, reduce }) {
+  const [abierto, setAbierto] = useState(() => { try { return !sessionStorage.getItem("dv_nudge_off"); } catch (e) { return true; } });
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    if (reduce) return;
+    const t = setInterval(() => setI((v) => (v + 1) % NUDGE_HUEVOS.length), 2600);
+    return () => clearInterval(t);
+  }, [reduce]);
+  const cerrar = () => { try { sessionStorage.setItem("dv_nudge_off", "1"); } catch (e) {} setAbierto(false); };
+  const src = "sprites/" + NUDGE_HUEVOS[i] + "/huevo/01-huevo.webp";
+  if (!abierto) {
+    return (
+      <button className="pf-dock-mini pf-nudge-mini" onClick={onAdopt} aria-label="Adoptar a tu compañero" title="Adoptar a tu compañero">
+        <img src={src} alt="" />
+      </button>
+    );
+  }
+  return (
+    <div className="pf-nudge" role="region" aria-label="Adopta a tu compañero">
+      <img className="pf-nudge-egg" src={src} alt="" width="46" height="58" />
+      <div className="pf-nudge-txt">
+        <strong>¡Adopta a tu compañero!</strong>
+        <p>Elige una criatura, ponle nombre y ayúdala a crecer jugando.</p>
+        <div className="pf-nudge-btns">
+          <button className="pf-btn pf-btn-primary" onClick={onAdopt}>Adoptar</button>
+          <button className="pf-btn pf-btn-secondary" onClick={cerrar}>Ahora no</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CompanionDock({ page, onPerfil }) {
+  const { user, perfil: perfilReal, esAdmin } = useSession();
+  const isDog = !!(user && esAdmin);
+  const perfil = isDog ? { nombre: "Profe", curso: "" } : perfilReal;
   const oculto = usePetHidden();
   const [pet, setPet] = useState(null);
+  const [petCargado, setPetCargado] = useState(false);
   const [st, setSt] = useState(null);
   const [tick, setTick] = useState(0);
   const [x, setX] = useState(null);
@@ -3274,15 +3358,27 @@ function CompanionDock({ page }) {
   const reduce = useMemo(() => !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches), []);
 
   useEffect(() => {
-    if (!user || !perfil) { setPet(null); setSt(null); return; }
+    if (!user || !perfil) { setPet(null); setSt(null); setPetCargado(false); return; }
     let vivo = true;
+    if (isDog) {
+      (async () => {
+        let m = null;
+        try { const r = await window.storage.get(mascotaKey(user.uid), true); m = JSON.parse(r.value); } catch (e) {}
+        if (!m || m.especie !== "dog") m = { uid: user.uid, especie: "dog", nombre: DOG_NOMBRE, etapa: 4 };
+        if (vivo) { setPet(m); setPetCargado(true); }
+        const dr = await dogResumen();
+        if (vivo) setSt({ ...LOGROS_VACIO(), ultimoDia: dr.ultimo, hoyN: dr.hoyN });
+      })();
+      return () => { vivo = false; };
+    }
     (async () => {
       try { const r = await window.storage.get(mascotaKey(user.uid), true); const m = JSON.parse(r.value); if (vivo) setPet(m); } catch (e) { if (vivo) setPet(null); }
+      if (vivo) setPetCargado(true);
       const d = await leerLogros(logrosKey(perfil.curso, perfil.nombre));
       if (vivo) setSt({ ...LOGROS_VACIO(), ...(d || {}) });
     })();
     return () => { vivo = false; };
-  }, [user && user.uid, perfil && perfil.nombre, tick, page]);
+  }, [user && user.uid, isDog, perfil && perfil.nombre, tick, page]);
 
   useEffect(() => {
     const f = () => setVp(window.innerWidth);
@@ -3291,8 +3387,8 @@ function CompanionDock({ page }) {
   }, []);
 
   const nv = st ? nivelDeXP(calcXP(st)) : null;
-  const etapa = nv ? etapaDeNivel(nv.actual.n) : 1;
-  const animo = animoMascota(st).id;
+  const etapa = isDog ? 4 : nv ? etapaDeNivel(nv.actual.n) : 1;
+  const animo = isDog && st && !st.ultimoDia ? "contento" : animoMascota(st).id;
   const esp = pet ? pet.especie : "owl";
   const movil = vp < 900;
   const k = movil ? (page === "juegos" ? 0.34 : 0.45) : 0.6;
@@ -3369,11 +3465,20 @@ function CompanionDock({ page }) {
     return () => { limpiar(); r.busy = false; r.walking = false; };
   }, [activa, etapa, animo, reduce, movil, page === "juegos"]);
 
+  // el profe renombró a su perrito
+  useEffect(() => {
+    if (!isDog) return;
+    const f = () => setTick((t) => t + 1);
+    window.addEventListener("dv-dog-rename", f);
+    return () => window.removeEventListener("dv-dog-rename", f);
+  }, [isDog]);
+
   // reacciones a premios y fallos de los juegos
   useEffect(() => {
     if (!activa) return;
     const h = (e) => {
       const d = e.detail || {};
+      if (isDog) return;
       if (d.nombre && perfil && d.nombre !== perfil.nombre) return;
       setTick((t) => t + 1);
       if (d.tipo === "premio") {
@@ -3405,11 +3510,15 @@ function CompanionDock({ page }) {
     const t = setTimeout(() => {
       if (r.busy) return;
       r.last = Date.now();
-      let txt = FRASES_SECCION[page] || FRASES_SECCION.home;
+      let txt = isDog ? (DOG_FRASES[page] || DOG_FRASES.home) : (FRASES_SECCION[page] || FRASES_SECCION.home);
       try {
-        if (!sessionStorage.getItem("dv_pet_hi")) { sessionStorage.setItem("dv_pet_hi", "1"); txt = "¡Hola, " + String(perfil.nombre).split(" ")[0] + "! Qué bueno verte."; }
+        if (!sessionStorage.getItem("dv_pet_hi")) { sessionStorage.setItem("dv_pet_hi", "1"); txt = isDog ? "¡Buen día, profe! Soy " + pet.nombre + ", a tu servicio." : "¡Hola, " + String(perfil.nombre).split(" ")[0] + "! Qué bueno verte."; }
       } catch (e) {}
-      if (r.animo === "dormido") txt = "Zzz… juega una partida y me despiertas.";
+      if (isDog) {
+        if (r.animo === "dormido") txt = "Zzz… hace días que nadie juega, profe.";
+        else if (r.animo === "hambre") txt = "Se extrañan las partidas… ¿los animamos, profe?";
+        else if (st && st.hoyN > 0 && (page === "home" || page === "inicio" || page === "juegos" || page === "terrapesos")) txt = "Hoy ya jugaron " + st.hoyN + (st.hoyN === 1 ? " estudiante" : " estudiantes") + ". ¡Bien, profe!";
+      } else if (r.animo === "dormido") txt = "Zzz… juega una partida y me despiertas.";
       else if (r.animo === "hambre") txt = "Tengo hambre de ideas… ¿jugamos?";
       mostrar(txt, 4200, false);
     }, 1100);
@@ -3418,7 +3527,8 @@ function CompanionDock({ page }) {
 
   useEffect(() => () => { limpiar(); clearTimeout(r.mt); }, []);
 
-  if (!activa || x === null) return null;
+  const invitar = !!(user && perfil && petCargado && !pet && page !== "perfil");
+  if (!activa || x === null) return invitar ? <AdoptNudge onAdopt={onPerfil} reduce={reduce} /> : null;
 
   if (oculto) {
     return (
@@ -3429,6 +3539,7 @@ function CompanionDock({ page }) {
   }
 
   const alTocar = () => {
+    if (isDog) { reaccionar([{ pose: "saludo", ms: 1700, msg: r.animo === "dormido" ? "¡Guau! Me despertaste, profe." : (DOG_FRASES[page] || DOG_FRASES.home), msgMs: 4800, ocultar: true }, { pose: "idle", ms: 3000 }]); return; }
     if (etapa === 1) { reaccionar([{ pose: "idle", ms: 3600, msg: "Aún soy un huevito… ¡ayúdame a crecer jugando!", ocultar: true }]); return; }
     if (r.animo === "dormido") { reaccionar([{ pose: "saludo", ms: 1700, msg: "¡Me despertaste! ¿Jugamos una partida?", msgMs: 4800, ocultar: true }, { pose: "idle", ms: 3000 }]); return; }
     reaccionar([{ pose: "saludo", ms: 1600, msg: FRASES_SECCION[page] || FRASES_SECCION.home, msgMs: 4800, ocultar: true }, { pose: "idle", ms: 3200 }]);
@@ -3459,6 +3570,25 @@ function CompanionDock({ page }) {
 const JUEGO_NOMBRE = { snake: "Snake", wordle: "Palabra del día", color: "Color", pregunta: "Pregunta del día", capitales: "Capitales", password: "Contraseña" };
 const numTP = (p) => parseInt(String(p).replace(/[.\s]/g, ""), 10) || 0;
 function fechaCorta(k) { if (!k) return "—"; const [y, m, d] = String(k).split("-"); return d + "/" + m; }
+
+function DogRename({ user }) {
+  const [n, setN] = useState("");
+  const [msg, setMsg] = useState("");
+  useEffect(() => { (async () => { try { const r = await window.storage.get(mascotaKey(user.uid), true); const m = JSON.parse(r.value); if (m && m.especie === "dog") setN(m.nombre); else setN(DOG_NOMBRE); } catch (e) { setN(DOG_NOMBRE); } })(); }, [user.uid]);
+  const guardar = async () => {
+    const nombre = n.trim().slice(0, 16) || DOG_NOMBRE;
+    try { await window.storage.set(mascotaKey(user.uid), JSON.stringify({ uid: user.uid, especie: "dog", nombre, etapa: 4, nacio: new Date().toISOString() }), true); setN(nombre); setMsg("Guardado."); window.dispatchEvent(new Event("dv-dog-rename")); }
+    catch (e) { setMsg("No se pudo guardar."); }
+  };
+  return (
+    <div className="pf-adm-bar" style={{ marginBottom: 6 }}>
+      <span className="pf-muted" style={{ fontSize: 13 }}>Tu compañero:</span>
+      <input className="pf-input" style={{ maxWidth: 180 }} maxLength={16} value={n} onChange={(e) => { setN(e.target.value); setMsg(""); }} aria-label="Nombre de tu perrito" />
+      <button className="pf-btn pf-btn-secondary" style={{ padding: "8px 14px", fontSize: 13 }} onClick={guardar}>Cambiar nombre</button>
+      {msg && <span className="pf-muted" role="status" style={{ fontSize: 13 }}>{msg}</span>}
+    </div>
+  );
+}
 
 function AdminPanel({ tpData, nav }) {
   const { user, esAdmin, cargando, entrar, salir } = useSession();
@@ -3585,6 +3715,7 @@ function AdminPanel({ tpData, nav }) {
   return (
     <div className="pf-container pf-section" style={{ paddingTop: 44 }}>
       {cab}
+      <DogRename user={user} />
       <div className="pf-adm-bar">
         <div className="pf-chip-row">
           <button className="pf-chip" style={{ cursor: "pointer", ...(curso === "todos" ? { background: "var(--gold-soft)", color: "var(--ink)", borderColor: "var(--gold-soft)", fontWeight: 600 } : {}) }} onClick={() => setCurso("todos")}>Todos</button>
@@ -7458,7 +7589,7 @@ function PlataformaFilosofia() {
           <img src={IMG.buzonIcon} alt="" />
         </button>
         <Spinozito />
-        <CompanionDock page={view.page} />
+        <CompanionDock page={view.page} onPerfil={() => nav("perfil")} />
         <BookEasterEgg />
         <CelebrationLayer />
         {toast && (
