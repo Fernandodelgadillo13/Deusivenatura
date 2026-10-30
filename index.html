@@ -2458,6 +2458,26 @@ footer.pf-footer { border-top: 1px solid rgba(139,92,246,0.15); margin-top: 20px
 /* ---------- Compañero: sprites y dock flotante ---------- */
 .pf-sprite { display: block; max-width: none; pointer-events: none; user-select: none; -webkit-user-drag: none; filter: drop-shadow(0 6px 10px rgba(0,0,0,.45)); }
 .pf-sprite-fallback { color: var(--violet-soft); }
+.pf-dock-anuncio { max-width: 260px; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.pf-dock-anuncio .pf-btn { padding: 6px 12px; font-size: 13px; }
+.pf-vit-home { margin-top: 26px; }
+.pf-vit-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.pf-vit-row { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 12px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07); }
+.pf-vit-row.yo { border-color: var(--gold-soft); background: rgba(245,197,66,.09); }
+.pf-vit-pos { width: 30px; font-weight: 700; color: var(--gold-soft); font-family: var(--font-display, inherit); }
+.pf-vit-spr { width: 74px; height: 72px; display: flex; align-items: flex-end; justify-content: center; overflow: visible; flex: none; }
+.pf-vit-info { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.pf-vit-info strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pf-vit-dato { font-size: 13px; color: var(--ink-soft, inherit); white-space: nowrap; }
+.pf-spr-img { display: block; max-width: none; pointer-events: none; user-select: none; -webkit-user-drag: none; }
+.pf-prenda { position: absolute; pointer-events: none; overflow: visible; }
+.pf-tienda-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+.pf-tienda-item { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; padding: 12px; border-radius: 14px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.09); }
+.pf-tienda-item.puesto { border-color: var(--gold-soft); background: rgba(245,197,66,.08); }
+.pf-tienda-th { height: 52px; display: flex; align-items: center; }
+.pf-tienda-sw { width: 38px; height: 38px; border-radius: 50%; display: inline-block; }
+.pf-tienda-btns { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+.pf-tienda-btns .pf-btn { padding: 6px 10px; font-size: 12.5px; }
 .pf-pet-hit { position: relative; z-index: 1; display: flex; align-items: flex-end; justify-content: center; background: none; border: none; padding: 0; cursor: pointer; border-radius: 16px; margin-top: 14px; }
 .pf-pet-hit:focus-visible { outline: 2px solid var(--gold); outline-offset: 4px; }
 .pf-pet-stage.etapa-1 .pf-pet-hit .pf-sprite { animation: pf-egg-wobble 3.6s ease-in-out infinite; transform-origin: 50% 100%; }
@@ -3069,7 +3089,167 @@ function sprDims(esp, etapa, k) {
   return { w: Math.round(m.w * e), h: Math.round(m.h * e), pie: Math.round(m.pie * e) };
 }
 
-function AnimSprite({ esp, etapa, pose, k = 0.5, flip = false }) {
+
+/* ---------- Tienda de la mascota: skins, gorros, cuello y auras ---------- */
+const SPR_HEAD = {"buho/cria":[[49.8,27.7,51.0],[49.8,26.9,51.0],[56.1,26.9,50.6],[54.9,24.6,50.6],[56.1,26.9,50.6],[54.9,24.6,50.6],[49.8,9.2,50.4],[49.8,26.2,50.7],[46.4,29.2,50.6],[53.0,35.8,52.9],[49.8,31.9,53.3],[54.2,26.9,50.6]],"buho/joven":[[49.8,25.0,46.6],[49.8,24.2,46.6],[57.1,24.6,46.1],[55.7,22.7,46.1],[57.1,24.6,46.1],[55.7,22.7,46.1],[49.8,9.4,46.6],[49.8,23.4,46.6],[46.8,26.2,46.1],[40.2,32.0,47.5],[49.8,27.7,46.3],[53.7,24.2,46.1]],"buho/adulto":[[49.8,25.4,34.3],[49.8,24.6,34.3],[56.4,25.0,34.3],[55.2,23.5,34.3],[56.4,25.0,34.3],[55.2,23.5,34.3],[49.8,12.1,34.3],[50.8,11.7,32.6],[47.5,26.5,34.3],[42.8,31.4,34.7],[49.6,27.3,34.3],[52.7,24.6,34.3]],"buho/ancestral":[[50.0,19.0,39.0],[50.0,19.0,39.0],[50.0,19.0,39.0],[50.0,19.0,39.0],[50.0,19.0,39.0],[50.0,19.0,39.0],[50.0,19.0,39.0],[50.0,19.0,39.0],[50.0,19.0,39.0],[50.0,19.0,39.0],[50.0,19.0,39.0],[50.0,19.0,39.0]],"zorro/cria":[[49.8,25.8,49.4],[49.8,25.0,49.4],[54.9,26.5,49.4],[54.0,23.8,49.4],[54.9,26.5,49.4],[54.0,23.8,49.4],[49.8,6.9,49.4],[49.8,23.8,49.4],[47.3,28.5,49.1],[42.6,35.8,48.8],[45.2,27.7,50.6],[53.0,26.2,49.0]],"zorro/joven":[[49.8,24.1,45.9],[49.8,23.3,45.9],[56.4,24.9,46.1],[55.0,23.0,46.1],[56.4,24.9,46.1],[55.0,23.0,46.1],[49.8,8.6,45.9],[49.8,22.6,45.9],[47.5,26.5,45.8],[43.2,33.1,45.7],[45.4,26.1,46.1],[52.7,24.9,46.1]],"zorro/adulto":[[49.8,21.9,35.4],[49.8,21.5,35.4],[55.9,22.7,35.4],[54.6,20.7,35.4],[55.9,22.7,35.4],[54.6,20.7,35.4],[49.8,8.4,35.4],[49.8,20.7,35.4],[47.9,23.9,35.4],[44.9,30.3,35.4],[46.6,23.9,35.4],[52.1,22.7,35.4]],"zorro/ancestral":[[50.0,19.0,39.0],[50.0,19.0,39.0],[50.0,19.0,39.0],[50.0,19.0,39.0],[50.0,19.0,39.0],[50.0,19.0,39.0],[50.0,19.0,39.0],[50.0,19.0,39.0],[50.0,19.0,39.0],[50.0,19.0,39.0],[50.0,19.0,39.0],[50.0,19.0,39.0]],"lobo/cria":[[49.8,25.4,49.4],[49.8,24.6,49.4],[54.8,26.5,49.4],[53.8,24.2,49.4],[54.8,26.5,49.4],[53.8,24.2,49.4],[49.8,6.9,49.4],[49.8,23.8,49.4],[47.5,28.5,49.1],[43.5,36.5,49.4],[45.6,28.1,49.0],[52.7,26.5,49.8]],"lobo/joven":[[49.8,21.9,46.6],[49.8,21.5,46.6],[56.2,22.7,46.1],[54.8,20.7,46.1],[56.2,22.7,46.1],[54.8,20.7,46.1],[49.8,6.0,46.6],[49.8,20.7,46.6],[47.5,24.3,46.1],[43.8,31.5,46.1],[46.1,24.7,46.1],[52.5,22.7,46.1]],"lobo/adulto":[[49.8,20.3,36.7],[49.8,19.5,36.7],[56.2,21.1,37.2],[55.1,19.1,36.7],[56.2,21.1,37.2],[55.1,19.1,36.7],[49.8,6.1,36.7],[49.8,19.1,33.0],[48.0,22.4,37.2],[44.9,28.5,37.2],[46.7,22.8,37.2],[52.0,20.7,37.2]],"lobo/ancestral":[[50.0,19.0,39.0],[50.0,19.0,39.0],[50.0,19.0,39.0],[50.0,19.0,39.0],[50.0,19.0,39.0],[50.0,19.0,39.0],[50.0,19.0,39.0],[50.0,19.0,39.0],[50.0,19.0,39.0],[50.0,19.0,39.0],[50.0,19.0,39.0],[50.0,19.0,39.0]],"cuervo/cria":[[49.8,30.6,47.9],[49.8,29.9,47.9],[53.8,31.0,47.9],[52.9,28.7,47.9],[53.8,31.0,47.9],[52.9,28.7,47.9],[49.8,12.7,47.9],[49.8,29.1,47.9],[48.3,33.2,48.2],[46.4,40.3,49.4],[48.1,34.0,50.6],[51.5,31.0,48.1]],"cuervo/joven":[[49.8,27.2,46.6],[49.8,26.8,45.9],[55.0,27.6,46.1],[53.9,25.7,46.1],[55.0,27.6,46.1],[53.9,25.7,46.1],[49.8,11.7,46.6],[49.8,26.1,45.9],[48.6,29.2,46.1],[46.6,35.4,46.2],[48.2,29.6,46.1],[51.4,27.2,46.1]],"cuervo/adulto":[[49.8,27.3,34.3],[49.8,26.5,34.3],[55.0,27.3,34.3],[53.9,25.8,34.3],[55.0,27.3,34.3],[53.9,25.8,34.3],[49.8,14.0,34.3],[49.2,7.6,20.2],[49.0,28.8,34.3],[47.5,33.7,34.3],[48.6,29.2,34.3],[51.0,27.3,34.3]],"cuervo/ancestral":[[50.0,19.0,39.0],[50.0,19.0,39.0],[50.0,19.0,39.0],[50.0,19.0,39.0],[50.0,19.0,39.0],[50.0,19.0,39.0],[50.0,19.0,39.0],[50.0,19.0,39.0],[50.0,19.0,39.0],[50.0,19.0,39.0],[50.0,19.0,39.0],[50.0,19.0,39.0]]};
+const TIENDA_CATS = [{ id: "skin", nombre: "Skins" }, { id: "cabeza", nombre: "Gorros" }, { id: "cuello", nombre: "Cuello" }, { id: "aura", nombre: "Auras" }];
+const TIENDA = [
+  { id: "sk-aurora", cat: "skin", nombre: "Aurora", precio: 4000, filtro: "hue-rotate(75deg) saturate(1.1)", color: "#5eead4" },
+  { id: "sk-oceano", cat: "skin", nombre: "Océano", precio: 4500, filtro: "hue-rotate(170deg) saturate(1.1)", color: "#38bdf8" },
+  { id: "sk-amatista", cat: "skin", nombre: "Amatista", precio: 5000, filtro: "hue-rotate(245deg) saturate(1.15)", color: "#a78bfa" },
+  { id: "sk-rosa", cat: "skin", nombre: "Cuarzo rosa", precio: 5500, filtro: "hue-rotate(305deg) saturate(1.1)", color: "#f472b6" },
+  { id: "sk-sombra", cat: "skin", nombre: "Sombra", precio: 6000, filtro: "grayscale(.75) brightness(.78) contrast(1.1)", color: "#64748b" },
+  { id: "sk-oro", cat: "skin", nombre: "Oro antiguo", precio: 7000, filtro: "sepia(.9) saturate(2.2) hue-rotate(-12deg) brightness(1.08)", color: "#f5c542" },
+  { id: "ca-laurel", cat: "cabeza", nombre: "Corona de laurel", precio: 1000 },
+  { id: "ca-birrete", cat: "cabeza", nombre: "Birrete de egresado", precio: 3000 },
+  { id: "ca-copa", cat: "cabeza", nombre: "Sombrero de copa", precio: 5000 },
+  { id: "ca-mago", cat: "cabeza", nombre: "Gorro de mago", precio: 7000 },
+  { id: "ca-corona", cat: "cabeza", nombre: "Corona real", precio: 10000 },
+  { id: "cu-mono", cat: "cuello", nombre: "Moño violeta", precio: 1000 },
+  { id: "cu-bufanda", cat: "cuello", nombre: "Bufanda roja", precio: 2000 },
+  { id: "cu-medalla", cat: "cuello", nombre: "Medalla de oro", precio: 5000 },
+  { id: "au-oro", cat: "aura", nombre: "Destello dorado", precio: 2000, filtro: "drop-shadow(0 0 5px #fbbf24) drop-shadow(0 0 14px #f59e0b)", color: "#fbbf24" },
+  { id: "au-violeta", cat: "aura", nombre: "Resplandor violeta", precio: 5000, filtro: "drop-shadow(0 0 5px #c4b5fd) drop-shadow(0 0 14px #8b5cf6)", color: "#8b5cf6" },
+  { id: "au-cian", cat: "aura", nombre: "Estela cian", precio: 8000, filtro: "drop-shadow(0 0 5px #67e8f9) drop-shadow(0 0 14px #06b6d4)", color: "#22d3ee" },
+];
+const tiendaItem = (id) => TIENDA.find((t) => t.id === id) || null;
+const nombreTerra = (n) => Number(n || 0).toLocaleString("es-CL");
+
+function PrendaCabeza({ id }) {
+  if (id === "ca-birrete") return (<g><path d="M26 30 L26 48 Q50 60 74 48 L74 30 L50 40 Z" fill="#2a2a48" stroke="#14142a" strokeWidth="1.5" /><polygon points="4,24 50,6 96,24 50,42" fill="#1b1b2f" stroke="#f5c542" strokeWidth="2" /><path d="M50 24 L86 28 L86 50" fill="none" stroke="#f5c542" strokeWidth="2.4" strokeLinecap="round" /><circle cx="86" cy="52" r="4" fill="#f5c542" /></g>);
+  if (id === "ca-corona") return (<g><polygon points="10,58 10,24 30,40 50,8 70,40 90,24 90,58" fill="#f5c542" stroke="#b8860b" strokeWidth="2" strokeLinejoin="round" /><rect x="10" y="50" width="80" height="8" fill="#e0a82e" /><circle cx="10" cy="24" r="5" fill="#ef4444" /><circle cx="50" cy="8" r="5.5" fill="#38bdf8" /><circle cx="90" cy="24" r="5" fill="#ef4444" /></g>);
+  if (id === "ca-mago") return (<g><path d="M52 2 L84 54 Q50 64 16 54 Z" fill="#5b3fd0" stroke="#3b1fa8" strokeWidth="1.6" strokeLinejoin="round" /><ellipse cx="50" cy="55" rx="47" ry="6.5" fill="#4a2fb8" stroke="#3b1fa8" strokeWidth="1.6" /><rect x="26" y="44" width="48" height="6" fill="#f5c542" opacity=".9" /><circle cx="50" cy="28" r="3" fill="#fde68a" /><circle cx="63" cy="40" r="2.2" fill="#fde68a" /><circle cx="40" cy="38" r="2" fill="#fde68a" /></g>);
+  if (id === "ca-copa") return (<g><rect x="25" y="6" width="50" height="42" rx="4" fill="#1c1c28" stroke="#0b0b14" strokeWidth="1.5" /><rect x="25" y="34" width="50" height="9" fill="#8b5cf6" /><ellipse cx="50" cy="50" rx="45" ry="8" fill="#232334" stroke="#0b0b14" strokeWidth="1.5" /></g>);
+  if (id === "ca-laurel") return (<g>{[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => { const x = 8 + i * 8.4; const t = (x - 50) / 42; const y = 52 - 30 * (1 - t * t); const rot = t * 55; return <ellipse key={i} cx={x} cy={y} rx="8" ry="3.6" fill={i % 2 ? "#4ade80" : "#22c55e"} stroke="#15803d" strokeWidth="0.9" transform={"rotate(" + rot + " " + x + " " + y + ")"} />; })}</g>);
+  return null;
+}
+function PrendaCuello({ id }) {
+  if (id === "cu-bufanda") return (<g><path d="M4 8 Q50 30 96 8 L96 22 Q50 44 4 22 Z" fill="#dc2626" stroke="#991b1b" strokeWidth="1.5" /><path d="M66 30 L88 26 L94 56 L72 58 Z" fill="#dc2626" stroke="#991b1b" strokeWidth="1.5" /><path d="M70 40 L91 37 M71 48 L92 46" stroke="#fecaca" strokeWidth="2.4" /></g>);
+  if (id === "cu-mono") return (<g><path d="M50 18 L14 2 L14 34 Z M50 18 L86 2 L86 34 Z" fill="#8b5cf6" stroke="#5b21b6" strokeWidth="1.6" strokeLinejoin="round" /><circle cx="50" cy="18" r="8" fill="#6d28d9" stroke="#4c1d95" strokeWidth="1.4" /></g>);
+  if (id === "cu-medalla") return (<g><path d="M26 0 L50 28 L74 0" fill="none" stroke="#38bdf8" strokeWidth="7" strokeLinejoin="round" /><circle cx="50" cy="34" r="11" fill="#f5c542" stroke="#b8860b" strokeWidth="2" /><circle cx="50" cy="34" r="6" fill="none" stroke="#b8860b" strokeWidth="1.4" /></g>);
+  return null;
+}
+function Prendas({ eq, head, w, h }) {
+  const hw = (head[2] / 100) * w, cx = (head[0] / 100) * w, tp = (head[1] / 100) * h;
+  const out = [];
+  if (eq.cabeza) { const aw = hw * 1.22, ah = aw * 0.62; out.push(<svg key="c" className="pf-prenda" viewBox="0 0 100 62" width={aw} height={ah} style={{ left: cx - aw / 2, top: tp + hw * 0.16 - ah }}><PrendaCabeza id={eq.cabeza} /></svg>); }
+  if (eq.cuello) { const aw = hw * 1.1, ah = aw * 0.42; out.push(<svg key="n" className="pf-prenda" viewBox="0 0 100 42" width={aw} height={ah} style={{ left: cx - aw / 2, top: tp + hw * 0.9 }}><PrendaCuello id={eq.cuello} /></svg>); }
+  return out;
+}
+
+/* compra: descuenta del saldo real de terrapesos y guarda la prenda en el doc de la mascota */
+async function leerSaldoTP(curso, nombre) {
+  try {
+    const r = await window.storage.get(TERRAPESOS_STORAGE_KEY, true);
+    const d = JSON.parse(r.value);
+    const c = (d.estudiantesPorCurso || []).find((x) => x.id === curso);
+    const e = c && c.estudiantes.find((x) => x.label === nombre);
+    return e ? numTP(e.price) : null;
+  } catch (e) { return null; }
+}
+async function cambiarSaldoTP(curso, nombre, delta) {
+  const r = await window.storage.get(TERRAPESOS_STORAGE_KEY, true);
+  const d = { ...TERRAPESOS_DEFAULT, ...JSON.parse(r.value) };
+  let saldo = null;
+  const nuevo = { ...d, estudiantesPorCurso: d.estudiantesPorCurso.map((c) => c.id !== curso ? c : { ...c, estudiantes: c.estudiantes.map((e) => { if (e.label !== nombre) return e; saldo = numTP(e.price); return { ...e, price: addTerrapesos(e.price, delta) }; }) }) };
+  if (saldo === null) return null;
+  if (saldo + delta < 0) return { falta: -(saldo + delta) };
+  await window.storage.set(TERRAPESOS_STORAGE_KEY, JSON.stringify(nuevo), true);
+  return { saldo: saldo + delta };
+}
+async function comprarPrenda(user, perfil, item) {
+  try {
+    const c = await cambiarSaldoTP(perfil.curso, perfil.nombre, -item.precio);
+    if (!c) return { ok: false, msg: "No encontré tu nombre en la lista de Terrapesos." };
+    if (c.falta) return { ok: false, msg: "Te faltan " + nombreTerra(c.falta) + " terrapesos." };
+    try {
+      const r = await window.storage.get(mascotaKey(user.uid), true);
+      const m = JSON.parse(r.value);
+      const m2 = { ...m, inv: Array.from(new Set([...(m.inv || []), item.id])), gastado: (m.gastado || 0) + item.precio };
+      await window.storage.set(mascotaKey(user.uid), JSON.stringify(m2), true);
+      window.dispatchEvent(new Event("dv-tp-refresh"));
+      return { ok: true, pet: m2, saldo: c.saldo };
+    } catch (err) {
+      try { await cambiarSaldoTP(perfil.curso, perfil.nombre, item.precio); } catch (e2) {}
+      return { ok: false, msg: "No se pudo completar la compra. No se te cobró nada." };
+    }
+  } catch (e) { return { ok: false, msg: "No se pudo completar la compra. Intenta de nuevo." }; }
+}
+
+function TiendaMascota({ pet, user, perfil, etapa, prueba, setPrueba, onGuardar }) {
+  const [cat, setCat] = useState("skin");
+  const [saldo, setSaldo] = useState(null);
+  const [msg, setMsg] = useState("");
+  const [busy, setBusy] = useState("");
+  const inv = pet.inv || [];
+  const eq = pet.eq || {};
+  useEffect(() => {
+    let vivo = true;
+    leerSaldoTP(perfil.curso, perfil.nombre).then((v) => { if (vivo) setSaldo(v); });
+    return () => { vivo = false; };
+  }, [perfil.curso, perfil.nombre]);
+  const items = TIENDA.filter((t) => t.cat === cat);
+  const comprar = async (t) => {
+    if (busy) return;
+    setBusy(t.id); setMsg("");
+    const r = await comprarPrenda(user, perfil, t);
+    setBusy("");
+    if (!r.ok) { setMsg(r.msg); return; }
+    setSaldo(r.saldo);
+    setMsg("¡Compraste «" + t.nombre + "»!");
+    onGuardar({ ...r.pet, eq: { ...(r.pet.eq || {}), [t.cat]: t.id } }, true);
+    setPrueba((p) => ({ ...p, [t.cat]: undefined }));
+  };
+  const poner = (t, puesto) => { onGuardar({ ...pet, eq: { ...eq, [t.cat]: puesto ? null : t.id } }, true); setPrueba((p) => ({ ...p, [t.cat]: undefined })); };
+  const probar = (t) => setPrueba((p) => ({ ...p, [t.cat]: p[t.cat] === t.id ? undefined : t.id }));
+  const miniatura = (t) => {
+    if (t.cat === "skin" || t.cat === "aura") return <img src={sprUrl(pet.especie, Math.max(2, etapa), 0)} alt="" height="50" style={{ height: 50, width: "auto", filter: t.filtro }} />;
+    return <svg viewBox={t.cat === "cabeza" ? "0 0 100 62" : "-2 -4 104 64"} width="64" height="44"><g>{t.cat === "cabeza" ? <PrendaCabeza id={t.id} /> : <PrendaCuello id={t.id} />}</g></svg>;
+  };
+  return (
+    <div className="pf-perfil-card pf-tienda" style={{ marginTop: 16 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "space-between" }}>
+        <h3 className="pf-perfil-h" style={{ margin: 0 }}>Tienda de {pet.nombre}</h3>
+        <span className="pf-chip pf-chip-me" aria-live="polite">Tienes {saldo === null ? "…" : nombreTerra(saldo)} terrapesos</span>
+      </div>
+      <p className="pf-muted" style={{ fontSize: 13, margin: "6px 0 10px" }}>Las compras se descuentan de tu saldo de Terrapesos. Puedes probar cualquier cosa antes de comprarla.</p>
+      <div className="pf-chip-row" role="tablist" aria-label="Categorías de la tienda" style={{ marginBottom: 12 }}>
+        {TIENDA_CATS.map((c) => (
+          <button key={c.id} role="tab" aria-selected={cat === c.id} className="pf-chip" style={{ cursor: "pointer", ...(cat === c.id ? { background: "var(--gold-soft)", color: "var(--ink)", borderColor: "var(--gold-soft)", fontWeight: 600 } : {}) }} onClick={() => { setCat(c.id); setMsg(""); }}>{c.nombre}</button>
+        ))}
+      </div>
+      {etapa === 1 && (cat === "cabeza" || cat === "cuello") && <p className="pf-muted" style={{ fontSize: 13 }}>Los gorros y la ropa se pueden usar cuando tu compañero nazca (nivel 2). Igual puedes comprarlos desde ya.</p>}
+      <div className="pf-tienda-grid">
+        {items.map((t) => {
+          const mio = inv.indexOf(t.id) >= 0;
+          const puesto = eq[t.cat] === t.id;
+          const probando = prueba[t.cat] === t.id;
+          const alcanza = saldo !== null && saldo >= t.precio;
+          return (
+            <div key={t.id} className={"pf-tienda-item" + (puesto ? " puesto" : "")}>
+              <div className="pf-tienda-th">{miniatura(t)}</div>
+              <strong>{t.nombre}</strong>
+              <span className="pf-muted" style={{ fontSize: 12.5 }}>{mio ? (puesto ? "Puesto" : "Es tuyo") : nombreTerra(t.precio) + " terrapesos"}</span>
+              <div className="pf-tienda-btns">
+                {mio ? (
+                  <button className="pf-btn pf-btn-secondary" onClick={() => poner(t, puesto)}>{puesto ? "Quitar" : "Poner"}</button>
+                ) : (
+                  <>
+                    <button className="pf-btn pf-btn-secondary" onClick={() => probar(t)} aria-pressed={probando}>{probando ? "Dejar de probar" : "Probar"}</button>
+                    <button className="pf-btn pf-btn-primary" disabled={!!busy || !alcanza} onClick={() => comprar(t)} title={alcanza ? "" : "Aún no te alcanza"}>{busy === t.id ? "Comprando…" : alcanza ? "Comprar" : "Faltan " + nombreTerra(saldo === null ? t.precio : t.precio - saldo)}</button>
+                  </>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {msg && <p className="pf-muted" role="status" style={{ fontSize: 13.5, marginBottom: 0 }}>{msg}</p>}
+    </div>
+  );
+}
+
+function AnimSprite({ esp, etapa, pose, k = 0.5, flip = false, eq = null }) {
   const [i, setI] = useState(0);
   const [roto, setRoto] = useState(false);
   const seq = etapa === 1 ? [0] : (SPR_SEQ[pose] || SPR_SEQ.idle);
@@ -3086,7 +3266,15 @@ function AnimSprite({ esp, etapa, pose, k = 0.5, flip = false }) {
   }, [esp, etapa]);
   const d = sprDims(esp, etapa, k);
   if (roto) return etapa === 1 ? <HuevoSvg size={d.h} /> : <Sym name={esp === "dog" ? "wolf" : esp} size={Math.round(d.h * 0.8)} className="pf-sprite-fallback" />;
-  return <img className="pf-sprite" src={sprUrl(esp, etapa, seq[i % seq.length])} width={d.w} height={d.h} alt="" draggable="false" onError={() => setRoto(true)} style={{ transform: flip ? "scaleX(-1)" : undefined, marginBottom: -d.pie }} />;
+  const fr = seq[i % seq.length];
+  const head = eq && etapa > 1 && esp !== "dog" ? ((SPR_HEAD[SPR_DIR[esp] + "/" + SPR_ETAPAS[etapa - 1]] || [])[fr] || null) : null;
+  const filtro = eq ? [eq.skin && (tiendaItem(eq.skin) || {}).filtro, eq.aura && (tiendaItem(eq.aura) || {}).filtro].filter(Boolean).join(" ") : "";
+  return (
+    <span className="pf-sprite" style={{ position: "relative", width: d.w, height: d.h, transform: flip ? "scaleX(-1)" : undefined, marginBottom: -d.pie }}>
+      <img className="pf-spr-img" src={sprUrl(esp, etapa, fr)} width={d.w} height={d.h} alt="" draggable="false" onError={() => setRoto(true)} style={filtro ? { filter: filtro } : undefined} />
+      {head && eq && (eq.cabeza || eq.cuello) && <Prendas eq={eq} head={head} w={d.w} h={d.h} />}
+    </span>
+  );
 }
 
 let PET_HIDDEN = (() => { try { return localStorage.getItem("dv_pet_hidden") === "1"; } catch (e) { return false; } })();
@@ -3105,7 +3293,7 @@ function usePetHidden() {
   return h;
 }
 
-function MascotaArte({ especie, etapa, animo }) {
+function MascotaArte({ especie, etapa, animo, eq = null }) {
   const esp = ESPECIES.find((e) => e.id === especie) || ESPECIES[0];
   const [temp, setTemp] = useState(null);
   useEffect(() => {
@@ -3119,14 +3307,14 @@ function MascotaArte({ especie, etapa, animo }) {
     <div className={"pf-pet-stage c-" + esp.color + " mood-" + animo + " etapa-" + etapa}>
       <div className="pf-pet-aura" />
       <button className="pf-pet-hit" onClick={saludar} aria-label={"Saludar a tu compañero, " + esp.nombre + " en etapa " + ETAPAS[etapa - 1]}>
-        <AnimSprite esp={esp.id} etapa={etapa} pose={temp || base} k={0.85} />
+        <AnimSprite esp={esp.id} etapa={etapa} pose={temp || base} k={0.85} eq={eq} />
       </button>
     </div>
   );
 }
 
 function MascotaCard({ st, nv, xp }) {
-  const { user } = useSession();
+  const { user, perfil } = useSession();
   const oculto = usePetHidden();
   const [pet, setPet] = useState(undefined); // undefined = cargando, null = sin mascota
   const [elegida, setElegida] = useState("owl");
@@ -3134,6 +3322,7 @@ function MascotaCard({ st, nv, xp }) {
   const [editando, setEditando] = useState(false);
   const [evo, setEvo] = useState("");
   const [busy, setBusy] = useState(false);
+  const [prueba, setPrueba] = useState({});
   const etapa = etapaDeNivel(nv.actual.n);
   const animo = animoMascota(st);
 
@@ -3159,9 +3348,9 @@ function MascotaCard({ st, nv, xp }) {
     return () => { vivo = false; };
   }, [user && user.uid]);
 
-  const guardar = async (m) => {
+  const guardar = async (m, avisar) => {
     setBusy(true);
-    try { await window.storage.set(mascotaKey(user.uid), JSON.stringify(m), true); setPet(m); }
+    try { await window.storage.set(mascotaKey(user.uid), JSON.stringify(m), true); setPet(m); if (avisar) window.dispatchEvent(new Event("dv-pet-eq")); }
     catch (e) { /* si falla, queda como estaba */ }
     setBusy(false);
   };
@@ -3205,9 +3394,12 @@ function MascotaCard({ st, nv, xp }) {
   const sigDef = sigNivel ? NIVELES_JUEGO.find((n) => n.n === sigNivel) : null;
   const faltan = sigDef ? Math.max(0, sigDef.xp - xp) : 0;
   const insig = (st.insignias || []).length;
+  const eqVista = { ...(pet.eq || {}) };
+  Object.keys(prueba).forEach((c) => { if (prueba[c]) eqVista[c] = prueba[c]; });
   return (
+    <>
     <div className="pf-perfil-card pf-pet-card" style={{ marginTop: 16 }}>
-      <MascotaArte especie={pet.especie} etapa={etapa} animo={animo.id} />
+      <MascotaArte especie={pet.especie} etapa={etapa} animo={animo.id} eq={eqVista} />
       <div className="pf-pet-info">
         {evo && <div className="pf-pet-evo" role="status">{evo}</div>}
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
@@ -3243,6 +3435,8 @@ function MascotaCard({ st, nv, xp }) {
         </label>
       </div>
     </div>
+    {perfil && <TiendaMascota pet={pet} user={user} perfil={perfil} etapa={etapa} prueba={prueba} setPrueba={setPrueba} onGuardar={guardar} />}
+    </>
   );
 }
 
@@ -3338,6 +3532,195 @@ function AdoptNudge({ onAdopt, reduce }) {
   );
 }
 
+/* ---------- Anuncios del profesor (los entrega la mascota) ---------- */
+const ANUNCIO_KEY = "anuncio-v1";
+function useAnuncio(perfil) {
+  const [an, setAn] = useState(null);
+  const [visto, setVisto] = useState(() => { try { return localStorage.getItem("dv_anuncio_visto") || ""; } catch (e) { return ""; } });
+  useEffect(() => {
+    if (!perfil) { setAn(null); return; }
+    let vivo = true;
+    const cargar = async () => {
+      try { const r = await window.storage.get(ANUNCIO_KEY, true); const d = JSON.parse(r.value); if (vivo) setAn(d && d.texto ? d : null); }
+      catch (e) { if (vivo) setAn(null); }
+    };
+    cargar();
+    const t = setInterval(cargar, 120000);
+    window.addEventListener("dv-anuncio", cargar);
+    return () => { vivo = false; clearInterval(t); window.removeEventListener("dv-anuncio", cargar); };
+  }, [perfil && perfil.curso]);
+  const aplica = !!(an && (!an.curso || an.curso === "todos" || an.curso === (perfil && perfil.curso)));
+  const pendiente = !!(aplica && String(an.id) !== visto);
+  const descartar = () => { if (!an) return; try { localStorage.setItem("dv_anuncio_visto", String(an.id)); } catch (e) {} setVisto(String(an.id)); };
+  return { an, pendiente, descartar };
+}
+function AnuncioCard({ anu }) {
+  return (
+    <div className="pf-nudge" role="alert">
+      <div className="pf-nudge-txt">
+        <strong>Mensaje del profe</strong>
+        <p>{anu.an.texto}</p>
+        <div className="pf-nudge-btns"><button className="pf-btn pf-btn-primary" onClick={anu.descartar}>¡Entendido!</button></div>
+      </div>
+    </div>
+  );
+}
+function AnuncioAdmin({ cursos }) {
+  const [actual, setActual] = useState(null);
+  const [texto, setTexto] = useState("");
+  const [curso, setCurso] = useState("todos");
+  const [msg, setMsg] = useState("");
+  const cargar = async () => { try { const r = await window.storage.get(ANUNCIO_KEY, true); const d = JSON.parse(r.value); setActual(d && d.texto ? d : null); } catch (e) { setActual(null); } };
+  useEffect(() => { cargar(); }, []);
+  const publicar = async () => {
+    const t = texto.trim().slice(0, 240);
+    if (!t) return;
+    try {
+      await window.storage.set(ANUNCIO_KEY, JSON.stringify({ id: Date.now(), texto: t, curso, fecha: new Date().toISOString() }), true);
+      setTexto(""); setMsg("Publicado. Cada estudiante lo recibirá de su mascota."); await cargar();
+      window.dispatchEvent(new Event("dv-anuncio")); window.dispatchEvent(new Event("dv-dog-anuncio"));
+    } catch (e) { setMsg("No se pudo publicar. Revisa que las reglas de Firestore estén publicadas."); }
+  };
+  const quitar = async () => {
+    try { await window.storage.delete(ANUNCIO_KEY, true); setMsg("Anuncio quitado."); await cargar(); } catch (e) { setMsg("No se pudo quitar."); }
+  };
+  const nombreCurso = (id) => id === "todos" ? "todos los cursos" : ((cursos.find((c) => c.id === id) || {}).nombre || id);
+  return (
+    <div className="pf-perfil-card" style={{ margin: "10px 0" }}>
+      <h3 className="pf-perfil-h" style={{ marginTop: 0 }}>Anuncio para tus estudiantes</h3>
+      <p className="pf-muted" style={{ fontSize: 13, margin: "0 0 8px" }}>Lo entrega la mascota de cada estudiante cuando entra a la página, hasta que aprieta «¡Entendido!».</p>
+      <textarea className="pf-input" rows={2} maxLength={240} style={{ width: "100%", resize: "vertical" }} placeholder="Ej.: Mañana prueba de Rousseau. ¡Repasen el contrato social!" value={texto} onChange={(e) => { setTexto(e.target.value); setMsg(""); }} aria-label="Texto del anuncio" />
+      <div className="pf-adm-bar" style={{ marginTop: 8 }}>
+        <select className="pf-select" value={curso} onChange={(e) => setCurso(e.target.value)} aria-label="Curso destinatario">
+          <option value="todos">Todos los cursos</option>
+          {cursos.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+        </select>
+        <button className="pf-btn pf-btn-primary" style={{ padding: "8px 14px", fontSize: 13 }} disabled={!texto.trim()} onClick={publicar}>Publicar</button>
+        {actual && <button className="pf-btn pf-btn-secondary" style={{ padding: "8px 14px", fontSize: 13 }} onClick={quitar}>Quitar anuncio actual</button>}
+      </div>
+      {actual && <p className="pf-muted" style={{ fontSize: 13, margin: "6px 0 0" }}>Activo para {nombreCurso(actual.curso)}: «{actual.texto}»</p>}
+      {msg && <p className="pf-muted" role="status" style={{ fontSize: 13, margin: "6px 0 0" }}>{msg}</p>}
+    </div>
+  );
+}
+
+/* ---------- Vitrina del curso: ranking de mascotas ---------- */
+function VitrinaHome({ cursos, perfil, user }) {
+  const lista = (cursos || []).filter((c) => (c.estudiantes || []).length > 0);
+  const [sel, setSel] = useState(perfil ? perfil.curso : "");
+  if (!lista.length) return null;
+  const cur = lista.find((c) => c.id === sel) || lista[0];
+  return (
+    <section className="pf-vit-home" aria-label="Vitrina de mascotas">
+      <div className="pf-section-head" style={{ marginBottom: 6 }}>
+        <div>
+          <h2 style={{ fontSize: 18 }}>Vitrina de mascotas</h2>
+          <p>Las compañeras y compañeros más avanzados y mejor vestidos de cada curso.</p>
+        </div>
+      </div>
+      {lista.length > 1 && (
+        <div className="pf-chip-row" role="tablist" aria-label="Curso">
+          {lista.map((c) => (
+            <button key={c.id} role="tab" aria-selected={cur.id === c.id} className="pf-chip" style={{ cursor: "pointer", ...(cur.id === c.id ? { background: "var(--gold-soft)", color: "var(--ink)", borderColor: "var(--gold-soft)", fontWeight: 600 } : {}) }} onClick={() => setSel(c.id)}>{c.nombre}</button>
+          ))}
+        </div>
+      )}
+      <VitrinaCurso key={cur.id} cursoObj={cur} user={user} />
+    </section>
+  );
+}
+let VITRINA_CACHE = {};
+function vitCacheGet(id) {
+  const m = VITRINA_CACHE[id];
+  if (m && Date.now() - m.t < 600000) return m.rows;
+  try { const j = JSON.parse(localStorage.getItem("dv_vit_" + id)); if (j && Date.now() - j.t < 600000) { VITRINA_CACHE[id] = j; return j.rows; } } catch (e) {}
+  return null;
+}
+function vitCacheClear() {
+  VITRINA_CACHE = {};
+  try { Object.keys(localStorage).filter((k) => k.indexOf("dv_vit_") === 0).forEach((k) => localStorage.removeItem(k)); } catch (e) {}
+}
+async function cargarVitrina(curso) {
+  const c = vitCacheGet(curso.id);
+  if (c) return c;
+  const J = async (k) => { try { const r = await window.storage.get(k, true); return JSON.parse(r.value); } catch (e) { return null; } };
+  const rows = [];
+  const est = curso.estudiantes || [];
+  for (let i = 0; i < est.length; i += 10) {
+    const parte = await Promise.all(est.slice(i, i + 10).map(async (e) => {
+      const v = await J(vinculoKey(curso.id, e.label));
+      if (!v || !v.uid) return null;
+      const [m, st] = await Promise.all([J(mascotaKey(v.uid)), J(logrosKey(curso.id, e.label))]);
+      if (!m) return null;
+      const xp = calcXP({ ...LOGROS_VACIO(), ...(st || {}) });
+      const nv = nivelDeXP(xp);
+      return { nombre: e.label, uid: v.uid, pet: m, xp, nivel: nv.actual.n, etapa: etapaDeNivel(nv.actual.n), vestidos: (m.inv || []).length };
+    }));
+    parte.forEach((x) => x && rows.push(x));
+  }
+  const pack = { t: Date.now(), rows };
+  VITRINA_CACHE[curso.id] = pack;
+  try { localStorage.setItem("dv_vit_" + curso.id, JSON.stringify(pack)); } catch (e) {}
+  return rows;
+}
+function nombreCorto(label) {
+  const p = String(label).split(" ").filter(Boolean);
+  return p.length < 2 ? p[0] || "" : p[0] + " " + p[p.length - 1].charAt(0) + ".";
+}
+function VitrinaCurso({ cursoObj, user }) {
+  const [rows, setRows] = useState(() => vitCacheGet(cursoObj.id));
+  const [tab, setTab] = useState("nivel");
+  const cargar = async (forzar) => {
+    if (forzar) vitCacheClear();
+    if (forzar || !vitCacheGet(cursoObj.id)) setRows(null);
+    setRows(await cargarVitrina(cursoObj));
+  };
+  useEffect(() => { cargar(false); }, [cursoObj.id]);
+  useEffect(() => {
+    const f = () => vitCacheClear();
+    window.addEventListener("dv-pet-eq", f);
+    return () => window.removeEventListener("dv-pet-eq", f);
+  }, []);
+  const lista = useMemo(() => {
+    if (!rows) return [];
+    const base = tab === "nivel" ? rows : rows.filter((r) => r.vestidos > 0);
+    return [...base].sort((a, b) => tab === "nivel" ? (b.xp - a.xp) : (b.vestidos - a.vestidos) || (b.xp - a.xp));
+  }, [rows, tab]);
+  const uidYo = user ? user.uid : null;
+  const miPos = uidYo ? lista.findIndex((r) => r.uid === uidYo) : -1;
+  const top = lista.slice(0, 10);
+  const fila = (r, i) => (
+    <li key={r.uid} className={"pf-vit-row" + (r.uid === uidYo ? " yo" : "")}>
+      <span className="pf-vit-pos">{i + 1}°</span>
+      <span className="pf-vit-spr"><AnimSprite esp={r.pet.especie} etapa={r.etapa} pose="idle" k={0.26} eq={r.pet.eq || null} /></span>
+      <span className="pf-vit-info">
+        <strong>{r.pet.nombre}</strong>
+        <span className="pf-muted" style={{ fontSize: 12.5 }}>de {nombreCorto(r.nombre)}{r.uid === uidYo ? " (tú)" : ""}</span>
+      </span>
+      <span className="pf-vit-dato">{tab === "nivel" ? "Nivel " + r.nivel : r.vestidos + (r.vestidos === 1 ? " prenda" : " prendas")}</span>
+    </li>
+  );
+  return (
+    <div className="pf-perfil-card" style={{ marginTop: 10 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "space-between" }}>
+        <h3 className="pf-perfil-h" style={{ margin: 0 }}>{cursoObj.nombre}</h3>
+        <button className="pf-link-btn" style={{ fontSize: 12.5 }} onClick={() => cargar(true)}>Actualizar</button>
+      </div>
+      <div className="pf-chip-row" style={{ margin: "10px 0" }} role="tablist" aria-label="Tipo de ranking">
+        {[["nivel", "Más avanzadas"], ["ropa", "Mejor vestidas"]].map(([id, t]) => (
+          <button key={id} role="tab" aria-selected={tab === id} className="pf-chip" style={{ cursor: "pointer", ...(tab === id ? { background: "var(--gold-soft)", color: "var(--ink)", borderColor: "var(--gold-soft)", fontWeight: 600 } : {}) }} onClick={() => setTab(id)}>{t}</button>
+        ))}
+      </div>
+      {rows === null ? <p className="pf-muted">Cargando la vitrina…</p> : !top.length ? <p className="pf-muted" style={{ margin: 0 }}>{tab === "nivel" ? "Aún no hay mascotas adoptadas en este curso." : "Todavía nadie se ha comprado ropa. ¡Sé la primera persona!"}</p> : (
+        <ol className="pf-vit-list">
+          {top.map(fila)}
+          {miPos >= 10 && fila(lista[miPos], miPos)}
+        </ol>
+      )}
+    </div>
+  );
+}
+
 function CompanionDock({ page, onPerfil }) {
   const { user, perfil: perfilReal, esAdmin } = useSession();
   const isDog = !!(user && esAdmin);
@@ -3356,6 +3739,7 @@ function CompanionDock({ page, onPerfil }) {
   const dockRef = React.useRef(null);
   const R = React.useRef({ x: 0, busy: false, walking: false, animo: "contento", timers: [], mt: 0, last: 0, prevEt: null, quieto: false, dims: { w: 100, h: 100 }, next: () => {} });
   const reduce = useMemo(() => !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches), []);
+  const anu = useAnuncio(isDog ? null : perfilReal);
 
   useEffect(() => {
     if (!user || !perfil) { setPet(null); setSt(null); setPetCargado(false); return; }
@@ -3465,6 +3849,29 @@ function CompanionDock({ page, onPerfil }) {
     return () => { limpiar(); r.busy = false; r.walking = false; };
   }, [activa, etapa, animo, reduce, movil, page === "juegos"]);
 
+  // el estudiante se puso o compró una prenda
+  useEffect(() => {
+    const f = () => setTick((t) => t + 1);
+    window.addEventListener("dv-pet-eq", f);
+    return () => window.removeEventListener("dv-pet-eq", f);
+  }, []);
+
+  // llega un anuncio del profe: la mascota saluda
+  const anuId = anu.pendiente ? anu.an.id : null;
+  useEffect(() => {
+    if (!activa || !anuId) return;
+    const t = setTimeout(() => reaccionar([{ pose: "saludo", ms: 2200 }, { pose: "feliz", ms: 2200 }]), 700);
+    return () => clearTimeout(t);
+  }, [activa, anuId]);
+
+  // el profe publicó un anuncio: el perrito lo celebra
+  useEffect(() => {
+    if (!isDog || !activa) return;
+    const f = () => reaccionar([{ pose: "saludo", ms: 1800, msg: "¡Anuncio publicado, profe!", msgMs: 4200 }, { pose: "feliz", ms: 1800 }]);
+    window.addEventListener("dv-dog-anuncio", f);
+    return () => window.removeEventListener("dv-dog-anuncio", f);
+  }, [isDog, activa]);
+
   // el profe renombró a su perrito
   useEffect(() => {
     if (!isDog) return;
@@ -3528,9 +3935,12 @@ function CompanionDock({ page, onPerfil }) {
   useEffect(() => () => { limpiar(); clearTimeout(r.mt); }, []);
 
   const invitar = !!(user && perfil && petCargado && !pet && page !== "perfil");
-  if (!activa || x === null) return invitar ? <AdoptNudge onAdopt={onPerfil} reduce={reduce} /> : null;
+  if (!activa || x === null) {
+    if (anu.pendiente && perfilReal && !isDog) return <AnuncioCard anu={anu} />;
+    return invitar ? <AdoptNudge onAdopt={onPerfil} reduce={reduce} /> : null;
+  }
 
-  if (oculto) {
+  if (oculto && !anu.pendiente) {
     return (
       <button className="pf-dock-mini" onClick={() => setPetHidden(false)} aria-label={"Mostrar a " + pet.nombre} title={"Mostrar a " + pet.nombre}>
         <img src={sprUrl(esp, etapa, 0)} alt="" />
@@ -3547,14 +3957,20 @@ function CompanionDock({ page, onPerfil }) {
 
   return (
     <div className="pf-dock" ref={dockRef} style={{ width: dims.w, transform: "translateX(" + x + "px)", transition: dur ? "transform " + dur + "s linear" : "none" }}>
-      {msg && (
+      {anu.pendiente ? (
+        <div className={"pf-dock-bubble pf-dock-anuncio" + (x > vp / 2 ? " right" : "")} role="alert">
+          <strong>Mensaje del profe</strong>
+          <span>{anu.an.texto}</span>
+          <button className="pf-btn pf-btn-primary" onClick={anu.descartar}>¡Entendido!</button>
+        </div>
+      ) : msg && (
         <div className={"pf-dock-bubble" + (x > vp / 2 ? " right" : "")} role="status" aria-live="polite">
           {msg.txt}
           {msg.ocultar && <button className="pf-link-btn" onClick={() => setPetHidden(true)}>Ocultar compañero</button>}
         </div>
       )}
       <button className={"pf-dock-btn pose-" + pose + (etapa === 1 ? " egg" : "")} onClick={alTocar} aria-label={"Tu compañero " + pet.nombre + ". Tócalo para que te salude."}>
-        <AnimSprite esp={esp} etapa={etapa} pose={pose} k={k} flip={flip} />
+        <AnimSprite esp={esp} etapa={etapa} pose={pose} k={k} flip={flip} eq={pet && pet.eq} />
       </button>
     </div>
   );
@@ -3716,6 +4132,7 @@ function AdminPanel({ tpData, nav }) {
     <div className="pf-container pf-section" style={{ paddingTop: 44 }}>
       {cab}
       <DogRename user={user} />
+      <AnuncioAdmin cursos={tpData.estudiantesPorCurso || []} />
       <div className="pf-adm-bar">
         <div className="pf-chip-row">
           <button className="pf-chip" style={{ cursor: "pointer", ...(curso === "todos" ? { background: "var(--gold-soft)", color: "var(--ink)", borderColor: "var(--gold-soft)", fontWeight: 600 } : {}) }} onClick={() => setCurso("todos")}>Todos</button>
@@ -5898,6 +6315,17 @@ function PlataformaFilosofia() {
     })();
   }, []);
 
+  useEffect(() => {
+    const f = async () => {
+      try {
+        const res = await window.storage.get(TERRAPESOS_STORAGE_KEY, true);
+        if (res && res.value) setTpData({ ...TERRAPESOS_DEFAULT, ...JSON.parse(res.value) });
+      } catch (e) {}
+    };
+    window.addEventListener("dv-tp-refresh", f);
+    return () => window.removeEventListener("dv-tp-refresh", f);
+  }, []);
+
   const [eventos, setEventos] = useState(null);
   useEffect(() => {
     (async () => {
@@ -6268,6 +6696,7 @@ function PlataformaFilosofia() {
           </div>
         </div>
         <MisionesCard onGo={() => nav("juegos")} />
+        {tpLoaded && <VitrinaHome cursos={tpData.estudiantesPorCurso} perfil={sesion.perfil} user={sesion.user} />}
       </div>
 
       {homeTickerItems.length > 0 && (
