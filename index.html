@@ -2474,6 +2474,7 @@ footer.pf-footer { border-top: 1px solid rgba(139,92,246,0.15); margin-top: 20px
 .pf-dock-anuncio { max-width: 260px; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
 .pf-dock-anuncio .pf-btn { padding: 6px 12px; font-size: 13px; }
 .pf-vit-home { margin-top: 26px; }
+a.pf-nav-link { text-decoration: none; color: inherit; }
 .pf-canje-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .pf-canje-row { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-radius: 12px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07); flex-wrap: wrap; }
 .pf-canje-txt { display: flex; flex-direction: column; flex: 1; min-width: 180px; }
@@ -6745,7 +6746,8 @@ function PlataformaFilosofia() {
 
   const nav = (page, params = {}) => {
     if (page === "terrapesos" && !params.interno) {
-      window.open(TERRAPESOS_URL, "_blank", "noopener,noreferrer");
+      const w = window.open(TERRAPESOS_URL, "_blank");
+      if (w) { try { w.opener = null; } catch (e) {} } else { window.location.href = TERRAPESOS_URL; }
       setMobileOpen(false); setSearchOpen(false);
       return;
     }
@@ -6812,7 +6814,12 @@ function PlataformaFilosofia() {
           <Search size={16} /> <span className="pf-search-label">Buscar…</span>
         </button>
         <div className="pf-side-nav">
-          {NAV_ITEMS.map((it) => (
+          {NAV_ITEMS.map((it) => it.key === "terrapesos" ? (
+            <a key={it.key} title="Abrir Terrapesos en otra pestaña" className="pf-nav-link" href={TERRAPESOS_URL} target="_blank" rel="noopener noreferrer" onClick={() => setMobileOpen(false)}>
+              <span className="pf-nav-ico"><it.icon size={18} className="pf-coin-spin" /></span>
+              <span className="pf-nav-label">{it.label}</span>
+            </a>
+          ) : (
             <button key={it.key} title={it.label} className={"pf-nav-link" + (isNavItemActive(it) ? " active" : "")} aria-current={isNavItemActive(it) ? "page" : undefined} onClick={() => { navToTarget(it.target); setMobileOpen(false); }}>
               <span className="pf-nav-ico"><it.icon size={18} className={it.key === "terrapesos" ? "pf-coin-spin" : undefined} /></span>
               <span className="pf-nav-label">{it.label}</span>
