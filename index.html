@@ -25,7 +25,7 @@
 <script type="text/babel" data-presets="react" data-type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs, runTransaction } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 
 /* ------------------------------------------------------------
@@ -80,6 +80,19 @@ if (!window.storage) {
       }
       localStorage.removeItem(key);
       return { key, deleted: true, shared };
+    },
+    // Lee, modifica y escribe un documento compartido de forma atómica (evita pisarse con
+    // Filocaptura o con otra pestaña que cambie el mismo saldo al mismo tiempo).
+    async update(key, fn) {
+      const ref = doc(db, "shared", key);
+      return runTransaction(db, async (tx) => {
+        const snap = await tx.get(ref);
+        const cur = snap.exists() ? snap.data().value : null;
+        const nuevo = fn(cur);
+        if (nuevo === undefined) return cur;
+        tx.set(ref, { value: nuevo });
+        return nuevo;
+      });
     },
     // Lee todos los documentos compartidos de una vez (lo usa el panel docente).
     async dump() {
@@ -2461,6 +2474,15 @@ footer.pf-footer { border-top: 1px solid rgba(139,92,246,0.15); margin-top: 20px
 .pf-dock-anuncio { max-width: 260px; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
 .pf-dock-anuncio .pf-btn { padding: 6px 12px; font-size: 13px; }
 .pf-vit-home { margin-top: 26px; }
+.pf-canje-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.pf-canje-row { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-radius: 12px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07); flex-wrap: wrap; }
+.pf-canje-txt { display: flex; flex-direction: column; flex: 1; min-width: 180px; }
+.pf-canje-precio { font-weight: 700; color: var(--gold-soft); white-space: nowrap; }
+.pf-canje-btns { display: inline-flex; gap: 6px; }
+.pf-canje-row .pf-btn { padding: 6px 12px; font-size: 13px; }
+.pf-cupon-overlay { position: fixed; inset: 0; z-index: 3000; background: rgba(4,6,18,.82); display: flex; align-items: center; justify-content: center; padding: 16px; overflow: auto; }
+.pf-cupon-box { max-width: 720px; width: 100%; }
+.pf-cupon-img { width: 100%; height: auto; display: block; border-radius: 18px; box-shadow: 0 18px 60px rgba(0,0,0,.6); }
 .pf-vit-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .pf-vit-row { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 12px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07); }
 .pf-vit-row.yo { border-color: var(--gold-soft); background: rgba(245,197,66,.09); }
@@ -3138,6 +3160,14 @@ function Prendas({ eq, head, w, h }) {
 }
 
 /* compra: descuenta del saldo real de terrapesos y guarda la prenda en el doc de la mascota */
+async function storageUpdate(key, fn) {
+  if (window.storage.update) return window.storage.update(key, fn);
+  let cur = null;
+  try { cur = (await window.storage.get(key, true)).value; } catch (e) {}
+  const nuevo = fn(cur);
+  if (nuevo !== undefined) await window.storage.set(key, nuevo, true);
+  return nuevo === undefined ? cur : nuevo;
+}
 async function leerSaldoTP(curso, nombre) {
   try {
     const r = await window.storage.get(TERRAPESOS_STORAGE_KEY, true);
@@ -3148,13 +3178,17 @@ async function leerSaldoTP(curso, nombre) {
   } catch (e) { return null; }
 }
 async function cambiarSaldoTP(curso, nombre, delta) {
-  const r = await window.storage.get(TERRAPESOS_STORAGE_KEY, true);
-  const d = { ...TERRAPESOS_DEFAULT, ...JSON.parse(r.value) };
-  let saldo = null;
-  const nuevo = { ...d, estudiantesPorCurso: d.estudiantesPorCurso.map((c) => c.id !== curso ? c : { ...c, estudiantes: c.estudiantes.map((e) => { if (e.label !== nombre) return e; saldo = numTP(e.price); return { ...e, price: addTerrapesos(e.price, delta) }; }) }) };
+  let saldo = null, falta = 0;
+  await storageUpdate(TERRAPESOS_STORAGE_KEY, (cur) => {
+    saldo = null; falta = 0;
+    const d = { ...TERRAPESOS_DEFAULT, ...(cur ? JSON.parse(cur) : {}) };
+    const nuevo = { ...d, estudiantesPorCurso: d.estudiantesPorCurso.map((c) => c.id !== curso ? c : { ...c, estudiantes: c.estudiantes.map((e) => { if (e.label !== nombre) return e; saldo = numTP(e.price); return { ...e, price: addTerrapesos(e.price, delta) }; }) }) };
+    if (saldo === null) return undefined;
+    if (saldo + delta < 0) { falta = -(saldo + delta); return undefined; }
+    return JSON.stringify(nuevo);
+  });
   if (saldo === null) return null;
-  if (saldo + delta < 0) return { falta: -(saldo + delta) };
-  await window.storage.set(TERRAPESOS_STORAGE_KEY, JSON.stringify(nuevo), true);
+  if (falta) return { falta };
   return { saldo: saldo + delta };
 }
 async function comprarPrenda(user, perfil, item) {
@@ -4065,6 +4099,24 @@ function AdminPanel({ tpData, nav }) {
     });
   }, [filas, curso, q, orden]);
 
+  const cupones = useMemo(() => {
+    if (!datos) return [];
+    const out = [];
+    Object.keys(datos).forEach((k) => {
+      if (k.indexOf("cupones-") !== 0) return;
+      try {
+        const d = JSON.parse(datos[k]);
+        (d.items || []).forEach((c) => { let uso = null; try { uso = datos[usoKey(c.code)] ? JSON.parse(datos[usoKey(c.code)]) : null; } catch (e) {} out.push({ ...c, uso }); });
+      } catch (e) {}
+    });
+    return out.sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)));
+  }, [datos]);
+  const cuponesVis = cupones.filter((c) => {
+    const t = q.trim().toLowerCase();
+    return (curso === "todos" || c.curso === curso) && (!t || (c.nombre + " " + c.code + " " + c.label).toLowerCase().includes(t));
+  });
+  const pendientes = cupones.filter((c) => !c.uso).length;
+  const marcarUsado = (c) => hacer("¿Marcar como usado el cupón " + c.code + " (" + c.label + ") de " + c.nombre + "?", async () => { await window.storage.set(usoKey(c.code), JSON.stringify({ code: c.code, fecha: new Date().toISOString() }), true); });
   const hoy = todayKey();
   const resumen = {
     total: visibles.length,
@@ -4143,6 +4195,7 @@ function AdminPanel({ tpData, nav }) {
         <input className="pf-input" style={{ maxWidth: 260 }} placeholder="Buscar nombre, correo o mascota…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Buscar" />
         <button className="pf-btn pf-btn-secondary" style={{ padding: "8px 14px", fontSize: 13 }} onClick={cargar}>Actualizar</button>
         <button className="pf-btn pf-btn-secondary" style={{ padding: "8px 14px", fontSize: 13 }} onClick={exportar} disabled={!visibles.length}>Exportar CSV</button>
+        <button className="pf-btn pf-btn-secondary" style={{ padding: "8px 14px", fontSize: 13 }} onClick={() => nav("terrapesos", { interno: true })}>Editar saldos (Terrapesos interno)</button>
       </div>
       {error && <p className="pf-perfil-error" role="alert">{error}</p>}
       {aviso && <p className="pf-muted" role="status" style={{ fontSize: 13 }}>{aviso}</p>}
@@ -4158,6 +4211,7 @@ function AdminPanel({ tpData, nav }) {
       <div className="pf-tabs">
         <button className={"pf-tab" + (tab === "estudiantes" ? " active" : "")} onClick={() => setTab("estudiantes")}>Estudiantes</button>
         <button className={"pf-tab" + (tab === "mascotas" ? " active" : "")} onClick={() => setTab("mascotas")}>Mascotas</button>
+        <button className={"pf-tab" + (tab === "cupones" ? " active" : "")} onClick={() => setTab("cupones")}>Cupones{pendientes ? " (" + pendientes + ")" : ""}</button>
       </div>
 
       {datos === null && <p className="pf-muted">Cargando datos…</p>}
@@ -4220,6 +4274,28 @@ function AdminPanel({ tpData, nav }) {
         </div>
       )}
 
+      {datos !== null && tab === "cupones" && (
+        <div className="pf-adm-wrap">
+          <p className="pf-muted" style={{ fontSize: 13, margin: "0 0 8px" }}>Busca por código, nombre o beneficio. Cuando un estudiante te muestre su cupón, márcalo como usado para que no se repita.</p>
+          <table className="pf-adm-table">
+            <thead><tr><th>Fecha</th><th>Estudiante</th><th>Beneficio</th><th>Código</th><th>Estado</th><th></th></tr></thead>
+            <tbody>
+              {cuponesVis.length === 0 && <tr><td colSpan="6" className="pf-muted" style={{ padding: 16 }}>No hay cupones que coincidan.</td></tr>}
+              {cuponesVis.map((c) => (
+                <tr key={c.code}>
+                  <td>{fechaLarga(c.fecha)}</td>
+                  <td><strong>{c.nombre}</strong></td>
+                  <td>{c.label}<div className="pf-muted" style={{ fontSize: 11.5 }}>{nombreTerra(c.precio)} terrapesos</div></td>
+                  <td style={{ fontFamily: "ui-monospace, monospace", fontWeight: 700 }}>{c.code}</td>
+                  <td>{c.uso ? "Usado " + fechaLarga(c.uso.fecha) : <strong style={{ color: "var(--gold-soft)" }}>Vigente</strong>}</td>
+                  <td>{!c.uso && <button className="pf-btn pf-btn-secondary" style={{ padding: "5px 10px", fontSize: 12.5 }} onClick={() => marcarUsado(c)}>Marcar usado</button>}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
       {datos !== null && tab === "mascotas" && (
         <>
           <div className="pf-adm-pets">
@@ -4236,6 +4312,169 @@ function AdminPanel({ tpData, nav }) {
           {visibles.filter((r) => r.uid && !r.pet).length > 0 && <p className="pf-muted" style={{ fontSize: 13 }}>Con cuenta pero sin mascota: {visibles.filter((r) => r.uid && !r.pet).map((r) => r.nombre.split(" ")[0]).join(", ")}.</p>}
         </>
       )}
+    </div>
+  );
+}
+
+/* ---------- Casa de cambio: canje de beneficios con cupón en imagen ---------- */
+const cuponesKey = (uid) => "cupones-" + uid;
+const usoKey = (code) => "uso-" + code;
+function generarCodigo() {
+  const A = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const b = new Uint8Array(8);
+  try { crypto.getRandomValues(b); } catch (e) { for (let i = 0; i < 8; i++) b[i] = Math.floor(Math.random() * 256); }
+  const c = Array.from(b).map((v) => A[v % A.length]).join("");
+  return c.slice(0, 4) + "-" + c.slice(4);
+}
+const fechaLarga = (iso) => { try { return new Date(iso).toLocaleDateString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric" }); } catch (e) { return ""; } };
+async function cuponImagen(c, pet) {
+  const W = 960, H = 440;
+  const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+  const x = cv.getContext("2d");
+  const rr = (a, b, w, h, r) => { x.beginPath(); x.moveTo(a + r, b); x.arcTo(a + w, b, a + w, b + h, r); x.arcTo(a + w, b + h, a, b + h, r); x.arcTo(a, b + h, a, b, r); x.arcTo(a, b, a + w, b, r); x.closePath(); };
+  const envolver = (txt, maxW, maxL) => { const out = []; let cur = ""; String(txt).split(" ").forEach((p) => { const t = cur ? cur + " " + p : p; if (x.measureText(t).width > maxW && cur) { out.push(cur); cur = p; } else cur = t; }); if (cur) out.push(cur); return out.slice(0, maxL); };
+  const g = x.createLinearGradient(0, 0, W, H); g.addColorStop(0, "#2b1f63"); g.addColorStop(0.6, "#141a45"); g.addColorStop(1, "#0a0e2a");
+  rr(0, 0, W, H, 28); x.fillStyle = g; x.fill();
+  x.lineWidth = 6; x.strokeStyle = "#f5c542"; rr(10, 10, W - 20, H - 20, 22); x.stroke();
+  x.lineWidth = 2; x.setLineDash([8, 8]); x.strokeStyle = "rgba(245,197,66,.45)"; rr(26, 26, W - 52, H - 52, 16); x.stroke();
+  const px = 690;
+  x.strokeStyle = "rgba(255,255,255,.35)"; x.setLineDash([6, 9]); x.beginPath(); x.moveTo(px, 40); x.lineTo(px, H - 40); x.stroke(); x.setLineDash([]);
+  x.fillStyle = "#f5c542"; x.font = "700 18px system-ui, sans-serif"; try { x.letterSpacing = "3px"; } catch (e) {}
+  x.fillText("DEUS SIVE NATURA · CUPÓN DE CANJE", 60, 76);
+  try { x.letterSpacing = "0px"; } catch (e) {}
+  x.fillStyle = "#ffffff"; x.font = "700 40px Georgia, serif";
+  const L = envolver(c.label, 590, 3); L.forEach((t, i) => x.fillText(t, 60, 142 + i * 50));
+  let y = 142 + L.length * 50 + 4;
+  if (c.note) { x.fillStyle = "#cbd5ff"; x.font = "400 21px system-ui, sans-serif"; envolver(c.note, 590, 2).forEach((t, i) => x.fillText(t, 60, y + i * 28)); }
+  x.fillStyle = "#f5d98b"; x.font = "600 26px system-ui, sans-serif"; x.fillText("Para: " + c.nombre, 60, H - 98);
+  x.fillStyle = "#cbd5ff"; x.font = "400 20px system-ui, sans-serif"; x.fillText(String(c.cursoNombre || "") + " · " + fechaLarga(c.fecha) + " · " + nombreTerra(c.precio) + " terrapesos", 60, H - 66);
+  x.fillStyle = "rgba(255,255,255,.65)"; x.font = "italic 18px system-ui, sans-serif"; x.fillText("Válido una sola vez. Muéstraselo a tu profesor.", 60, H - 40);
+  // talón: mascota + código
+  const cx = px + (W - px) / 2;
+  if (pet) {
+    const im = new Image();
+    await new Promise((res) => { im.onload = res; im.onerror = res; im.src = sprUrl(pet.esp, pet.etapa, 0); });
+    if (im.naturalWidth) { const k = Math.min(210 / im.naturalWidth, 220 / im.naturalHeight); const w = im.naturalWidth * k, h = im.naturalHeight * k; x.drawImage(im, cx - w / 2, 250 - h, w, h); }
+  }
+  x.textAlign = "center"; x.fillStyle = "#f5c542"; x.font = "700 15px system-ui, sans-serif"; try { x.letterSpacing = "3px"; } catch (e) {}
+  x.fillText("CÓDIGO", cx, 292); try { x.letterSpacing = "0px"; } catch (e) {}
+  x.fillStyle = "#ffffff"; x.font = "700 36px ui-monospace, Menlo, Consolas, monospace"; x.fillText(c.code, cx, 340);
+  x.textAlign = "left";
+  // muescas laterales del talón
+  x.globalCompositeOperation = "destination-out"; x.beginPath(); x.arc(px, 0, 20, 0, Math.PI * 2); x.fill(); x.beginPath(); x.arc(px, H, 20, 0, Math.PI * 2); x.fill(); x.globalCompositeOperation = "source-over";
+  return cv.toDataURL("image/png");
+}
+function CuponModal({ cupon, pet, onClose }) {
+  const [url, setUrl] = useState("");
+  useEffect(() => { let vivo = true; cuponImagen(cupon, pet).then((u) => { if (vivo) setUrl(u); }); return () => { vivo = false; }; }, [cupon.code]);
+  useEffect(() => { const f = (e) => e.key === "Escape" && onClose(); window.addEventListener("keydown", f); return () => window.removeEventListener("keydown", f); }, []);
+  return (
+    <div className="pf-cupon-overlay" role="dialog" aria-modal="true" aria-label="Tu cupón" onClick={onClose}>
+      <div className="pf-cupon-box" onClick={(e) => e.stopPropagation()}>
+        {url ? <img className="pf-cupon-img" src={url} alt={"Cupón: " + cupon.label + ". Código " + cupon.code} /> : <p className="pf-muted">Preparando tu cupón…</p>}
+        <div className="pf-btn-row" style={{ marginTop: 12, justifyContent: "center" }}>
+          {url && <a className="pf-btn pf-btn-primary" href={url} download={"cupon-" + cupon.code + ".png"} style={{ textDecoration: "none" }}>Guardar imagen</a>}
+          <button className="pf-btn pf-btn-secondary" onClick={onClose}>Cerrar</button>
+        </div>
+        <p className="pf-muted" style={{ fontSize: 12.5, textAlign: "center", margin: "8px 0 0" }}>Muéstraselo a tu profesor. En el celular, también puedes dejarlo apretado sobre la imagen para guardarla.</p>
+      </div>
+    </div>
+  );
+}
+async function canjearBeneficio(user, perfil, item) {
+  const precio = numTP(item.price);
+  try {
+    const c = await cambiarSaldoTP(perfil.curso, perfil.nombre, -precio);
+    if (!c) return { ok: false, msg: "No encontré tu nombre en la lista de Terrapesos." };
+    if (c.falta) return { ok: false, msg: "Te faltan " + nombreTerra(c.falta) + " terrapesos." };
+    const cup = { id: Date.now().toString(36), code: generarCodigo(), label: item.label, note: item.note || "", precio, fecha: new Date().toISOString(), nombre: perfil.nombre, curso: perfil.curso };
+    try {
+      await storageUpdate(cuponesKey(user.uid), (cur) => {
+        let d = { uid: user.uid, items: [] };
+        try { if (cur) d = JSON.parse(cur); } catch (e) {}
+        return JSON.stringify({ uid: user.uid, items: [cup, ...(d.items || [])] });
+      });
+    } catch (e) {
+      try { await cambiarSaldoTP(perfil.curso, perfil.nombre, precio); } catch (e2) {}
+      return { ok: false, msg: "No se pudo generar el cupón. No se te cobró nada." };
+    }
+    window.dispatchEvent(new Event("dv-tp-refresh"));
+    return { ok: true, cup, saldo: c.saldo };
+  } catch (e) { return { ok: false, msg: "No se pudo completar el canje. Intenta de nuevo." }; }
+}
+function CasaCambio({ perfil, user, tpData }) {
+  const [saldo, setSaldo] = useState(null);
+  const [cupones, setCupones] = useState(null);
+  const [usados, setUsados] = useState({});
+  const [conf, setConf] = useState(-1);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [ver, setVer] = useState(null);
+  const [pet, setPet] = useState(null);
+  const cursoNombre = ((tpData.estudiantesPorCurso || []).find((c) => c.id === perfil.curso) || {}).nombre || "";
+  const cargar = async () => {
+    setSaldo(await leerSaldoTP(perfil.curso, perfil.nombre));
+    let items = [];
+    try { const r = await window.storage.get(cuponesKey(user.uid), true); items = (JSON.parse(r.value).items) || []; } catch (e) {}
+    setCupones(items);
+    const u = {};
+    await Promise.all(items.map(async (c) => { try { const r = await window.storage.get(usoKey(c.code), true); u[c.code] = JSON.parse(r.value); } catch (e) {} }));
+    setUsados(u);
+  };
+  useEffect(() => {
+    cargar();
+    (async () => { try { const r = await window.storage.get(mascotaKey(user.uid), true); const m = JSON.parse(r.value); setPet({ esp: m.especie, etapa: m.etapa || 2 }); } catch (e) {} })();
+  }, [user.uid, perfil.nombre]);
+  const lista = (tpData.individual || []).filter((it) => it.label && numTP(it.price) > 0);
+  const canjear = async (it) => {
+    setBusy(true); setMsg("");
+    const r = await canjearBeneficio(user, perfil, it);
+    setBusy(false); setConf(-1);
+    if (!r.ok) { setMsg(r.msg); return; }
+    setSaldo(r.saldo);
+    setCupones((c) => [{ ...r.cup, cursoNombre }, ...(c || [])]);
+    setVer({ ...r.cup, cursoNombre });
+  };
+  return (
+    <div className="pf-perfil-card" style={{ marginTop: 16 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "space-between" }}>
+        <h3 className="pf-perfil-h" style={{ margin: 0 }}>Canjear beneficios</h3>
+        <span className="pf-chip pf-chip-me" aria-live="polite">Tienes {saldo === null ? "…" : nombreTerra(saldo)} terrapesos</span>
+      </div>
+      <p className="pf-muted" style={{ fontSize: 13, margin: "6px 0 10px" }}>Al canjear se descuentan tus terrapesos y recibes un cupón con un código. Muéstraselo a tu profesor para usarlo.</p>
+      <ul className="pf-canje-list">
+        {lista.map((it, i) => {
+          const precio = numTP(it.price); const alcanza = saldo !== null && saldo >= precio;
+          return (
+            <li key={i} className="pf-canje-row">
+              <div className="pf-canje-txt"><strong>{it.label}</strong>{it.note ? <span className="pf-muted" style={{ fontSize: 12.5 }}>{it.note}</span> : null}</div>
+              <span className="pf-canje-precio">{nombreTerra(precio)}</span>
+              {conf === i ? (
+                <span className="pf-canje-btns">
+                  <button className="pf-btn pf-btn-primary" disabled={busy} onClick={() => canjear(it)}>{busy ? "Canjeando…" : "Sí, canjear"}</button>
+                  <button className="pf-btn pf-btn-secondary" disabled={busy} onClick={() => setConf(-1)}>No</button>
+                </span>
+              ) : (
+                <button className="pf-btn pf-btn-secondary" disabled={!alcanza || busy} onClick={() => { setConf(i); setMsg(""); }} title={alcanza ? "" : "Aún no te alcanza"}>{alcanza ? "Canjear" : "Faltan " + nombreTerra(saldo === null ? precio : precio - saldo)}</button>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      {msg && <p className="pf-perfil-error" role="alert">{msg}</p>}
+      <h4 className="pf-perfil-h" style={{ fontSize: 16, margin: "16px 0 6px" }}>Mis cupones</h4>
+      {cupones === null ? <p className="pf-muted">Cargando…</p> : !cupones.length ? <p className="pf-muted" style={{ margin: 0, fontSize: 13.5 }}>Todavía no has canjeado nada.</p> : (
+        <ul className="pf-canje-list">
+          {cupones.map((c) => (
+            <li key={c.code} className="pf-canje-row">
+              <div className="pf-canje-txt"><strong>{c.label}</strong><span className="pf-muted" style={{ fontSize: 12.5 }}>{fechaLarga(c.fecha)} · código {c.code}</span></div>
+              <span className={"pf-chip" + (usados[c.code] ? "" : " pf-chip-me")}>{usados[c.code] ? "Usado" : "Vigente"}</span>
+              <button className="pf-btn pf-btn-secondary" onClick={() => setVer({ ...c, cursoNombre: c.cursoNombre || cursoNombre })}>Ver cupón</button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {ver && <CuponModal cupon={ver} pet={pet} onClose={() => setVer(null)} />}
     </div>
   );
 }
@@ -4367,6 +4606,8 @@ function PerfilPage({ tpData, nav }) {
       <div className="pf-perfil-card">{cab}</div>
 
       {st && nv && <MascotaCard st={st} nv={nv} xp={xp} />}
+
+      {est && <CasaCambio perfil={perfil} user={user} tpData={tpData} />}
 
       {!est && (
         <div className="pf-perfil-card" style={{ marginTop: 16 }}>
@@ -6211,6 +6452,7 @@ function CapitalesGame({ tpData, claimGameReward }) {
 }
 
 const FILOSOFOS_URL = "https://filocaptura.github.io/";
+const TERRAPESOS_URL = "https://terrapesos.github.io/";
 function Juegos({ tpData, claimGameReward }) {
   const [tab, setTab] = useState("snake");
   const [soundOn, setSoundOnState] = useState(SOUND_ON);
@@ -6484,24 +6726,29 @@ function PlataformaFilosofia() {
     if (nombre === ADMIN_NAME) return;
     window.dispatchEvent(new CustomEvent("dv-pet", { detail: { tipo: "premio", monto: amount, nombre } }));
     try {
-      const res = await window.storage.get(TERRAPESOS_STORAGE_KEY, true);
-      const latest = res && res.value ? { ...TERRAPESOS_DEFAULT, ...JSON.parse(res.value) } : tpData;
-      const updated = {
-        ...latest,
-        estudiantesPorCurso: latest.estudiantesPorCurso.map((c) =>
-          c.id === cursoId
-            ? { ...c, estudiantes: c.estudiantes.map((e) => (e.label === nombre ? { ...e, price: addTerrapesos(e.price, amount) } : e)) }
-            : c
-        ),
-      };
-      await window.storage.set(TERRAPESOS_STORAGE_KEY, JSON.stringify(updated), true);
-      setTpData(updated);
+      const val = await storageUpdate(TERRAPESOS_STORAGE_KEY, (cur) => {
+        const latest = cur ? { ...TERRAPESOS_DEFAULT, ...JSON.parse(cur) } : tpData;
+        return JSON.stringify({
+          ...latest,
+          estudiantesPorCurso: latest.estudiantesPorCurso.map((c) =>
+            c.id === cursoId
+              ? { ...c, estudiantes: c.estudiantes.map((e) => (e.label === nombre ? { ...e, price: addTerrapesos(e.price, amount) } : e)) }
+              : c
+          ),
+        });
+      });
+      setTpData({ ...TERRAPESOS_DEFAULT, ...JSON.parse(val) });
     } catch (e) {
       // si falla la lectura/escritura, el premio no queda registrado; el juego lo vuelve a intentar en el próximo cierre
     }
   };
 
   const nav = (page, params = {}) => {
+    if (page === "terrapesos" && !params.interno) {
+      window.open(TERRAPESOS_URL, "_blank", "noopener,noreferrer");
+      setMobileOpen(false); setSearchOpen(false);
+      return;
+    }
     setView({ page, ...params });
     setMobileOpen(false);
     setSearchOpen(false);
@@ -6561,13 +6808,6 @@ function PlataformaFilosofia() {
       </header>
       {mobileOpen && <div className="pf-side-backdrop" onClick={() => setMobileOpen(false)} />}
       <aside className={"pf-side" + (mobileOpen ? " open" : "")}>
-        <button className="pf-logo" onClick={() => { nav("home"); setMobileOpen(false); }} aria-label="Ir al inicio">
-          <div className="pf-logo-mark"><img src={IMG.hero} alt="" /></div>
-          <div className="pf-logo-text">
-            <div className="pf-logo-name">{NOMBRE_PLATAFORMA}</div>
-            <div className="pf-logo-sub">Filosofía · Aprender, cuestionar, argumentar</div>
-          </div>
-        </button>
         <button className="pf-search-btn" onClick={() => { setSearchOpen(true); setMobileOpen(false); }} aria-label="Buscar">
           <Search size={16} /> <span className="pf-search-label">Buscar…</span>
         </button>
