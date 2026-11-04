@@ -48,7 +48,7 @@ const fbApp = initializeApp(firebaseConfig);
 const db = getFirestore(fbApp);
 const auth = getAuth(fbApp);
 // Dominio del correo institucional (sin @). Ej.: "colegio.cl". Si queda vacío, se acepta cualquier cuenta Google.
-const DOMINIO_INSTITUCIONAL = "";
+const DOMINIO_INSTITUCIONAL = "colegioquillotaterranova.cl";
 // Correo(s) del profesor: ven el panel docente. Deben coincidir con los de las reglas de Firestore (esProfe).
 const ADMIN_EMAILS = ["fernandoferna111@gmail.com"];
 const esCorreoAdmin = (m) => ADMIN_EMAILS.includes(String(m || "").toLowerCase());
@@ -2984,10 +2984,15 @@ function SessionProvider({ children }) {
 }
 
 function IdentityPicker({ cursos, cursoSel, nombreSel, setCursoSel, setNombreSel, onPick }) {
-  const { perfil, user } = useSession();
+  const { perfil, user, esAdmin, cargando, entrar, error } = useSession();
   const pc = perfil ? perfil.curso : null;
   const pn = perfil ? perfil.nombre : null;
-  useEffect(() => { if (pc) { setCursoSel(pc); setNombreSel(pn); } }, [pc, pn]);
+  const adminCurso = esAdmin && !perfil && cursos && cursos[0] ? cursos[0].id : null;
+  useEffect(() => {
+    if (pc) { setCursoSel(pc); setNombreSel(pn); }
+    else if (adminCurso) { setCursoSel(adminCurso); setNombreSel(ADMIN_NAME); }
+    else { setCursoSel(""); setNombreSel(""); }
+  }, [pc, pn, adminCurso]);
   if (perfil) {
     const c = cursos.find((x) => x.id === perfil.curso);
     return (
@@ -2996,33 +3001,30 @@ function IdentityPicker({ cursos, cursoSel, nombreSel, setCursoSel, setNombreSel
       </div>
     );
   }
-  const cursoObj = cursos.find((c) => c.id === cursoSel);
-  return (
-    <>
+  if (adminCurso) {
+    return (
       <div className="pf-chip-row">
-        {cursos.map((c) => (
-          <button
-            key={c.id}
-            className="pf-chip"
-            style={{ cursor: "pointer", ...(cursoSel === c.id ? { background: "var(--gold-soft)", color: "var(--ink)", borderColor: "var(--gold-soft)", fontWeight: 600 } : {}) }}
-            onClick={() => { setCursoSel(c.id); setNombreSel(""); if (onPick) onPick(); }}
-          >
-            {c.nombre}
-          </button>
-        ))}
+        <span className="pf-chip pf-chip-me"><User size={13} /> Modo profesor · <strong>{ADMIN_NAME}</strong></span>
       </div>
-      {cursoSel && (
-        <select className="pf-select" style={{ width: "100%", maxWidth: 320 }} value={nombreSel} onChange={(e) => { setNombreSel(askAdmin(e.target.value)); if (onPick) onPick(); }}>
-          <option value="">Selecciona tu nombre…</option>
-          {cursoObj?.estudiantes.map((e) => <option key={e.label} value={e.label}>{e.label}</option>)}
-        </select>
+    );
+  }
+  if (cargando) return <p className="pf-muted" style={{ fontSize: 13 }}>Comprobando tu sesión…</p>;
+  return (
+    <div className="pf-login-gate" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, padding: "16px 18px", border: "1px solid var(--line, #ddd)", borderRadius: 14, maxWidth: 420, textAlign: "center" }}>
+      <strong>🔒 Para jugar y ganar terrapesos debes iniciar sesión</strong>
+      {!user ? (
+        <>
+          <p className="pf-muted" style={{ fontSize: 13, margin: 0 }}>Entra con tu cuenta de Google. Así cada estudiante juega solo con su propio nombre.</p>
+          <button className="pf-btn-google" onClick={entrar}><GoogleG /> Continuar con Google</button>
+          {error && <p className="pf-muted" style={{ fontSize: 12, margin: 0, color: "#b3261e" }}>{error}</p>}
+        </>
+      ) : (
+        <>
+          <p className="pf-muted" style={{ fontSize: 13, margin: 0 }}>Ya iniciaste sesión, pero falta vincular tu cuenta con tu nombre de la lista (se hace una sola vez).</p>
+          <button className="pf-btn pf-btn-primary" onClick={() => DV_GOTO && DV_GOTO("perfil")}>Vincular mi nombre</button>
+        </>
       )}
-      {!user && DV_GOTO && (
-        <p className="pf-muted" style={{ fontSize: 12.5, textAlign: "center", margin: 0 }}>
-          ¿Tienes cuenta institucional? <button className="pf-link-btn" onClick={() => DV_GOTO("perfil")}>Ingresa</button> y no tendrás que elegir tu nombre cada vez.
-        </p>
-      )}
-    </>
+    </div>
   );
 }
 
@@ -4704,7 +4706,7 @@ function DailyPlayGate({ gameId, amount, estudiantesPorCurso, onReward, children
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14, width: "100%" }}>
       <IdentityPicker cursos={cursos} cursoSel={cursoSel} nombreSel={nombreSel} setCursoSel={setCursoSel} setNombreSel={setNombreSel} />
       {!cursoSel || !nombreSel ? (
-        <p className="pf-muted" style={{ fontSize: 12.5, textAlign: "center" }}>Elige tu curso y tu nombre para poder ganar {amount} terrapesos jugando.</p>
+        <p className="pf-muted" style={{ fontSize: 12.5, textAlign: "center" }}>Inicia sesión para poder ganar {amount} terrapesos jugando.</p>
       ) : yaJugado ? (
         <div className="pf-chip-row"><span className="pf-chip">Ya reclamaste tus {amount} terrapesos de hoy en este juego. Puedes seguir jugando igual, por diversión.</span></div>
       ) : null}
@@ -8050,24 +8052,9 @@ function PlataformaFilosofia() {
 
         <div className="pf-topic-block">
           <h3>Escribir un mensaje</h3>
-          <div className="pf-chip-row" style={{ marginBottom: 12 }}>
-            {cursos.map((c) => (
-              <button
-                key={c.id}
-                className="pf-chip"
-                style={{ cursor: "pointer", ...(cursoSel === c.id ? { background: "var(--gold-soft)", color: "var(--ink)", borderColor: "var(--gold-soft)", fontWeight: 600 } : {}) }}
-                onClick={() => { setCursoSel(c.id); setNombreSel(""); }}
-              >
-                {c.nombre}
-              </button>
-            ))}
+          <div style={{ marginBottom: 12 }}>
+            <IdentityPicker cursos={cursos} cursoSel={cursoSel} nombreSel={nombreSel} setCursoSel={setCursoSel} setNombreSel={setNombreSel} />
           </div>
-          {cursoSel && (
-            <select className="pf-select" style={{ width: "100%", marginBottom: 10 }} value={nombreSel} onChange={(e) => setNombreSel(askAdmin(e.target.value))}>
-              <option value="">Selecciona tu nombre…</option>
-              {cursoObj?.estudiantes.map((e) => <option key={e.label} value={e.label}>{e.label}</option>)}
-            </select>
-          )}
           <textarea
             className="pf-reflection"
             style={{ marginBottom: 10 }}
@@ -8076,7 +8063,7 @@ function PlataformaFilosofia() {
             onChange={(e) => setTexto(e.target.value)}
           />
           <button className="pf-btn pf-btn-primary" disabled={!texto.trim() || !cursoSel || !nombreSel || enviando} onClick={enviar}>Enviar</button>
-          {(!cursoSel || !nombreSel) && <p className="pf-muted" style={{ fontSize: 12, marginTop: 8 }}>Elige tu curso y tu nombre para poder enviar.</p>}
+          {(!cursoSel || !nombreSel) && <p className="pf-muted" style={{ fontSize: 12, marginTop: 8 }}>Inicia sesión para poder enviar.</p>}
         </div>
 
         <div className="pf-topic-block">
