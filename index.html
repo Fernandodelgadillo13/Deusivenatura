@@ -2596,6 +2596,65 @@ a.pf-nav-link { text-decoration: none; color: inherit; }
   .pf-tienda-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
+@keyframes ph-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@keyframes ph-breathe { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(1.025); } }
+@keyframes ph-nod { 0%, 100% { transform: rotate(0); } 30% { transform: rotate(1.6deg); } 70% { transform: rotate(-1.6deg); } }
+@keyframes ph-blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(.1); } }
+@keyframes ph-hop { 0%, 100% { transform: translateY(0); } 35% { transform: translateY(-24px) scale(1.04); } 65% { transform: translateY(-3px); } }
+@keyframes ph-wave { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-34deg); } 75% { transform: rotate(-20deg); } }
+@keyframes ph-spin { to { transform: rotate(360deg); } }
+.ph-body { transform-box: fill-box; transform-origin: 50% 100%; animation: ph-breathe 3.4s ease-in-out infinite; }
+.ph-head { transform-box: fill-box; transform-origin: 50% 100%; animation: ph-nod 5.4s ease-in-out infinite; }
+.ph-eyes { transform-box: fill-box; transform-origin: center; animation: ph-blink 5.2s infinite; }
+@keyframes ph-talk { 0%, 100% { transform: scaleY(.12); } 50% { transform: scaleY(1); } }
+@keyframes ph-tap { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes ph-write { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(7deg); } 75% { transform: rotate(-5deg); } }
+@keyframes ph-scrolltilt { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(4deg); } }
+@keyframes ph-stache { 0%, 100% { transform: scale(1); } 30% { transform: scale(1.06, .94); } 60% { transform: scale(.97, 1.04); } }
+.ph-mouth { transform: scaleY(0); }
+.ph-item.on .ph-mouth { animation: ph-talk .36s ease-in-out infinite; }
+.ph-hand { transform-box: fill-box; transform-origin: 50% 100%; animation: ph-tap 3.6s ease-in-out infinite; }
+.ph-finger { transform-box: fill-box; transform-origin: 50% 100%; animation: ph-write 3.8s ease-in-out infinite; }
+.ph-scroll { transform-box: fill-box; transform-origin: 10% 100%; animation: ph-scrolltilt 4.4s ease-in-out infinite; }
+.ph-stache { transform-box: fill-box; transform-origin: 50% 50%; }
+.ph-item:hover .ph-stache, .ph-item.on .ph-stache { animation: ph-stache .6s ease-in-out 2; }
+.ph-item:hover .ph-finger, .ph-item.on .ph-finger { animation-duration: .8s; }
+.ph-item.hop .ph-fig { animation: ph-hop .65s cubic-bezier(.3,.7,.4,1); }
+.ph-astro { transform-box: fill-box; transform-origin: center; animation: ph-spin 14s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .ph-fig, .ph-body, .ph-head, .ph-eyes, .ph-astro, .ph-hand, .ph-finger, .ph-scroll, .ph-stache, .ph-mouth { animation: none !important; } }
+
+
+/* ---------- FILÓSOFOS CAMINANTES (por toda la página) ---------- */
+.ph-walkers { position: fixed; left: 0; right: 0; bottom: 0; height: 0; z-index: 52; pointer-events: none; }
+.ph-w { position: absolute; left: 0; bottom: 4px; pointer-events: none; will-change: transform; }
+.ph-w-btn { position: relative; display: block; width: 100%; background: none; border: none; padding: 0; cursor: pointer; pointer-events: auto; -webkit-tap-highlight-color: transparent; border-radius: 12px; color: var(--c); }
+.ph-w-btn:focus-visible { outline: 2px solid var(--c); outline-offset: 3px; }
+.ph-w-fig { display: block; width: 100%; transform-origin: 50% 100%; filter: drop-shadow(0 0 1.5px rgba(255,255,255,.7)) drop-shadow(0 0 7px color-mix(in srgb, var(--c) 60%, transparent)); }
+.ph-w-fig svg { display: block; width: 100%; height: auto; overflow: visible; }
+.ph-w.flip .ph-w-fig svg { transform: scaleX(-1); }
+.ph-w.walk .ph-w-fig { animation: ph-wbob .5s ease-in-out infinite; }
+.ph-w.hop .ph-w-fig { animation: ph-hop .65s cubic-bezier(.3,.7,.4,1); }
+.ph-foot-l, .ph-foot-r { transform-box: fill-box; transform-origin: 50% 50%; }
+.ph-w.walk .ph-foot-l { animation: ph-step .5s ease-in-out infinite; }
+.ph-w.walk .ph-foot-r { animation: ph-step .5s ease-in-out infinite -.25s; }
+.ph-w.walk .ph-head { animation-duration: 1s; }
+@keyframes ph-wbob { 0%, 100% { transform: translateY(0) rotate(-1.5deg); } 50% { transform: translateY(-4px) rotate(1.5deg); } }
+@keyframes ph-step { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-9px); } }
+.ph-w-bubble { position: absolute; bottom: calc(100% + 6px); left: 0; width: max-content; max-width: 230px; padding: 9px 12px; border-radius: 14px; background: var(--ink-2, #14172B); border: 1px solid var(--c); color: var(--text); text-align: left; line-height: 1.35; box-shadow: 0 8px 22px rgba(0,0,0,.45), 0 0 16px color-mix(in srgb, var(--c) 40%, transparent); pointer-events: auto; animation: pf-fade-up .22s ease both; font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 15px; }
+.ph-w-bubble.right { left: auto; right: 0; }
+.ph-w-bubble b { display: block; font-style: normal; font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--c); margin-bottom: 3px; }
+.ph-w-bubble .pf-link-btn { display: block; margin-top: 6px; font-family: inherit; font-style: normal; font-size: 12.5px; }
+@media (prefers-reduced-motion: reduce) { .ph-w-fig, .ph-foot-l, .ph-foot-r { animation: none !important; } }
+/* marcos y brillos neón en todo el sitio */
+.pf-shell::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; background-image: linear-gradient(rgba(139,92,246,.07) 1px, transparent 1px), linear-gradient(90deg, rgba(139,92,246,.07) 1px, transparent 1px); background-size: 46px 46px; -webkit-mask-image: radial-gradient(ellipse at 55% 25%, #000 15%, transparent 75%); mask-image: radial-gradient(ellipse at 55% 25%, #000 15%, transparent 75%); }
+.pf-perfil-card, .pf-topic-block, .pf-playlist-home-box { border-color: rgba(139,92,246,.5); box-shadow: 0 0 0 1px rgba(34,211,238,.07) inset, 0 0 24px rgba(139,92,246,.16); transition: box-shadow .2s ease-out, border-color .2s ease-out; }
+.pf-tienda-item { border-color: rgba(139,92,246,.35); box-shadow: 0 0 14px rgba(139,92,246,.10); }
+.pf-tienda-item.puesto { box-shadow: 0 0 18px rgba(245,197,66,.28); }
+@media (hover: hover) and (pointer: fine) { .pf-perfil-card:hover, .pf-topic-block:hover { border-color: rgba(34,211,238,.6); box-shadow: 0 0 0 1px rgba(34,211,238,.18) inset, 0 0 30px rgba(34,211,238,.2); } }
+.pf-section-head h2 { text-shadow: 0 0 20px rgba(167,139,250,.38); }
+.pf-btn-secondary { border-color: rgba(233,196,106,.65); box-shadow: 0 0 16px rgba(233,196,106,.2), 0 0 0 1px rgba(233,196,106,.08) inset; }
+.pf-tab.active { text-shadow: 0 0 16px rgba(34,211,238,.55); }
+
 `;
 
 /* ============================================================
@@ -6160,6 +6219,291 @@ function CelebrationLayer() {
   );
 }
 
+/* ---------- FILÓSOFOS ANIMADOS: personajes de dibujos animados (SVG propios) ---------- */
+const PHX = {
+  out: "#3a2a2e", skin: "#F4C9A4", skinD: "#E7A982", blush: "#F2938A", ink: "#2a1d22",
+};
+const PH_W = (inner) => `<svg viewBox="0 0 160 190" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><g stroke="${PHX.out}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">${inner}</g></svg>`;
+const PH_EYE = (x, y, rx = 4.4, ry = 5.6) => `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="${PHX.ink}" stroke="none"/><circle cx="${x + 1.4}" cy="${y - 1.8}" r="1.5" fill="#fff" stroke="none"/>`;
+const PH_MOUTH = (x, y, w = 9) => `<g class="ph-mouth" style="transform-origin:${x}px ${y}px"><ellipse cx="${x}" cy="${y + 3}" rx="${w}" ry="7" fill="#7a2a33" stroke="${PHX.out}" stroke-width="2.4"/><ellipse cx="${x}" cy="${y + 7}" rx="${w * 0.55}" ry="3" fill="#E9707A" stroke="none"/></g>`;
+const PH_NECK = (fill = PHX.skin) => `<path d="M66 108 Q66 128 62 134 L98 134 Q94 128 94 108Z" fill="${fill}"/>`;
+
+const PH_SVG = {
+  /* SÓCRATES: calvo, rizos crema, barba, nariz grande, mano en el mentón */
+  socrates: PH_W(`
+    <g class="ph-body">
+      <path d="M14 190 Q14 140 52 128 L80 138 L108 128 Q146 140 146 190Z" fill="#F3E6CB"/>
+      <path d="M40 140 Q76 150 132 190" fill="none" stroke="#D4BE92" stroke-width="3"/>
+      <path d="M52 128 Q40 150 38 190" fill="none" stroke="#D4BE92" stroke-width="3"/>
+      <path d="M62 126 Q80 150 98 126 L98 118 L62 118Z" fill="${PHX.skin}"/>
+    </g>
+    <g class="ph-head">
+      <circle cx="40" cy="60" r="12" fill="#EFE2C6"/><circle cx="34" cy="74" r="11" fill="#EFE2C6"/><circle cx="42" cy="88" r="10" fill="#EFE2C6"/>
+      <circle cx="120" cy="60" r="12" fill="#EFE2C6"/><circle cx="126" cy="74" r="11" fill="#EFE2C6"/><circle cx="118" cy="88" r="10" fill="#EFE2C6"/>
+      <ellipse cx="80" cy="66" rx="38" ry="42" fill="${PHX.skin}"/>
+      <path d="M62 36 Q80 28 98 36" fill="none" stroke="${PHX.skinD}" stroke-width="2.6"/>
+      <ellipse cx="54" cy="84" rx="7" ry="4.5" fill="${PHX.blush}" opacity=".45" stroke="none"/><ellipse cx="106" cy="84" rx="7" ry="4.5" fill="${PHX.blush}" opacity=".45" stroke="none"/>
+      <path d="M44 88 Q42 134 80 146 Q118 134 116 88 Q104 104 80 104 Q56 104 44 88Z" fill="#F8F0DE"/>
+      <path d="M60 128 Q64 134 70 130 M80 134 Q84 140 90 134 M96 126 Q100 132 106 126" fill="none" stroke="#DCCFAE" stroke-width="2.4"/>
+      <g class="ph-eyes">${PH_EYE(65, 66, 4.4, 5.6)}${PH_EYE(95, 66, 4.4, 5.6)}</g>
+      <path d="M56 54 Q65 46 75 54" fill="none" stroke-width="3.2"/><path d="M85 54 Q95 46 104 54" fill="none" stroke-width="3.2"/>
+      ${PH_MOUTH(80, 108, 8)}
+      <path d="M58 98 Q70 88 80 98 Q90 88 102 98 Q94 112 80 106 Q66 112 58 98Z" fill="#F8F0DE"/>
+      <ellipse cx="80" cy="87" rx="10" ry="9" fill="#EDA98A"/><ellipse cx="77" cy="83" rx="3.2" ry="2.2" fill="#fff" opacity=".55" stroke="none"/>
+    </g>
+    <g class="ph-hand">
+      <path d="M96 128 Q92 112 102 110 Q112 108 116 116 Q122 132 112 140 Q102 144 96 128Z" fill="${PHX.skin}"/>
+      <path d="M100 114 Q106 118 104 126 M108 112 Q113 118 111 127" fill="none" stroke-width="2.4"/>
+    </g>`),
+
+  /* ARISTÓTELES: pelo y barba grises, himation burdeos con broche, rollo */
+  aristoteles: PH_W(`
+    <g class="ph-body">
+      <path d="M14 190 Q14 140 52 128 L80 138 L108 128 Q146 140 146 190Z" fill="#8C3342"/>
+      <path d="M52 128 Q80 160 108 128 L98 120 L62 120Z" fill="#F3E6CB"/>
+      <path d="M40 150 Q80 176 126 150" fill="none" stroke="#6D2230" stroke-width="3"/>
+      <circle cx="118" cy="140" r="8" fill="#E9C46A"/><circle cx="118" cy="140" r="3" fill="#C69A2E" stroke="none"/>
+      <path d="M62 126 Q80 144 98 126 L98 116 L62 116Z" fill="${PHX.skin}"/>
+    </g>
+    <g class="ph-head">
+      <path d="M38 76 Q30 24 80 22 Q130 24 122 76 Q120 52 80 50 Q40 52 38 76Z" fill="#D2D2DA"/>
+      <ellipse cx="80" cy="70" rx="36" ry="40" fill="${PHX.skin}"/>
+      <path d="M40 66 Q36 34 80 32 Q124 34 120 66 Q112 46 80 46 Q48 46 40 66Z" fill="#D2D2DA"/>
+      <path d="M52 40 Q60 30 70 36 M78 34 Q88 26 98 34" fill="none" stroke="#A9A9B6" stroke-width="2.4"/>
+      <ellipse cx="55" cy="84" rx="7" ry="4.5" fill="${PHX.blush}" opacity=".4" stroke="none"/><ellipse cx="105" cy="84" rx="7" ry="4.5" fill="${PHX.blush}" opacity=".4" stroke="none"/>
+      <path d="M46 88 Q46 130 80 140 Q114 130 114 88 Q104 104 80 104 Q56 104 46 88Z" fill="#D8D8E0"/>
+      <path d="M64 126 Q70 132 76 126 M86 128 Q92 134 98 126" fill="none" stroke="#B5B5C4" stroke-width="2.4"/>
+      <g class="ph-eyes">${PH_EYE(66, 68, 4.2, 5.2)}${PH_EYE(94, 68, 4.2, 5.2)}</g>
+      <path d="M57 57 Q66 53 75 58" fill="none" stroke="#8E8E9C" stroke-width="3.6"/><path d="M85 58 Q94 53 103 57" fill="none" stroke="#8E8E9C" stroke-width="3.6"/>
+      <path d="M80 70 Q76 84 82 86" fill="none" stroke="${PHX.skinD}" stroke-width="2.6"/>
+      ${PH_MOUTH(80, 106, 7)}
+      <path d="M60 96 Q70 88 80 96 Q90 88 100 96 Q92 108 80 102 Q68 108 60 96Z" fill="#D8D8E0"/>
+    </g>
+    <g class="ph-scroll">
+      <g transform="rotate(-24 128 150)"><rect x="118" y="116" width="22" height="50" rx="5" fill="#F7EDD2"/><rect x="115" y="112" width="28" height="9" rx="4.5" fill="#C9A15B"/><rect x="115" y="162" width="28" height="9" rx="4.5" fill="#C9A15B"/><path d="M123 130 H135 M123 140 H135 M123 150 H131" fill="none" stroke="#B9A47A" stroke-width="2"/></g>
+      <circle cx="112" cy="162" r="9" fill="${PHX.skin}"/>
+    </g>`),
+
+  /* DESCARTES: pelo largo negro, bigote fino y perilla, cuello blanco, dedo en alto */
+  descartes: PH_W(`
+    <g class="ph-body">
+      <path d="M14 190 Q14 142 54 130 L80 142 L106 130 Q146 142 146 190Z" fill="#26262F"/>
+      <path d="M44 128 L80 146 L116 128 L134 152 L80 174 L26 152Z" fill="#FBFBFB"/>
+      <path d="M62 128 Q80 150 98 128 L98 118 L62 118Z" fill="${PHX.skin}"/>
+    </g>
+    <g class="ph-head">
+      <path d="M50 96 L110 96 L110 140 L50 140Z" fill="#1E1E28" stroke="none"/>
+      <path d="M40 66 Q20 108 30 150 L38 138 L42 160 L52 138 L58 150 Q60 118 56 96Z" fill="#1E1E28"/>
+      <path d="M120 66 Q140 108 130 150 L122 138 L118 160 L108 138 L102 150 Q100 118 104 96Z" fill="#1E1E28"/>
+      <path d="M36 74 Q30 16 80 16 Q130 16 124 74Z" fill="#1E1E28"/>
+      <circle cx="46" cy="82" r="8" fill="#F0C79F"/><circle cx="114" cy="82" r="8" fill="#F0C79F"/>
+      <path d="M48 72 Q48 42 80 42 Q112 42 112 72 Q112 108 80 122 Q48 108 48 72Z" fill="#F0C79F"/>
+      <path d="M46 70 Q46 30 80 28 Q114 30 114 70 Q106 40 84 40 Q80 52 70 56 Q56 50 46 70Z" fill="#1E1E28"/>
+      <path d="M62 24 Q80 18 98 26 M58 36 Q76 28 94 34" fill="none" stroke="#4a4a5c" stroke-width="2.4"/>
+      <ellipse cx="58" cy="90" rx="6" ry="4" fill="${PHX.blush}" opacity=".4" stroke="none"/><ellipse cx="102" cy="90" rx="6" ry="4" fill="${PHX.blush}" opacity=".4" stroke="none"/>
+      <g class="ph-eyes">
+        <ellipse cx="66" cy="74" rx="7" ry="5" fill="#fff"/><circle cx="67" cy="75" r="3.4" fill="${PHX.ink}" stroke="none"/>
+        <ellipse cx="94" cy="74" rx="7" ry="5" fill="#fff"/><circle cx="95" cy="75" r="3.4" fill="${PHX.ink}" stroke="none"/>
+        <path d="M58 72 Q66 66 74 72" fill="#F0C79F" stroke-width="2.6"/><path d="M86 72 Q94 66 102 72" fill="#F0C79F" stroke-width="2.6"/>
+      </g>
+      <path d="M56 64 Q66 56 76 64" fill="none" stroke="${PHX.ink}" stroke-width="4"/><path d="M84 64 Q94 56 104 64" fill="none" stroke="${PHX.ink}" stroke-width="4"/>
+      <path d="M80 76 Q74 94 82 96" fill="none" stroke="${PHX.skinD}" stroke-width="2.6"/>
+      ${PH_MOUTH(80, 106, 6)}
+      <path d="M62 100 Q72 94 80 99 Q88 94 98 100 Q90 104 80 102 Q70 104 62 100Z" fill="#1E1E28"/>
+      <path d="M74 112 Q80 124 86 112 Q80 116 74 112Z" fill="#1E1E28"/>
+    </g>
+    <g transform="translate(160 0) scale(-1 1)"><g class="ph-finger">
+      <path d="M36 134 Q24 92 44 52 Q36 94 46 130Z" fill="#F6EFE2"/>
+      <path d="M36 134 Q20 92 44 52" fill="none"/>
+      <path d="M38 126 Q38 96 42 74 M38 110 Q46 102 50 92" fill="none" stroke="#C9BFAE" stroke-width="2"/>
+      <path d="M18 142 Q16 128 28 126 L46 128 Q56 134 52 148 Q46 162 30 160 Q18 156 18 142Z" fill="${PHX.skin}"/>
+      <path d="M30 130 L32 148 M40 130 L42 150" fill="none" stroke-width="2.4"/>
+    </g></g>`),
+
+  /* NIETZSCHE: pelo castaño peinado, bigote enorme, traje azul */
+  nietzsche: PH_W(`
+    <g class="ph-body">
+      <path d="M14 190 Q14 142 54 130 L80 142 L106 130 Q146 142 146 190Z" fill="#3E4C6E"/>
+      <path d="M62 130 L80 176 L98 130 L80 138Z" fill="#fff"/>
+      <path d="M54 130 L66 168 L52 190 L30 190 Q30 150 54 130Z" fill="#33405F"/><path d="M106 130 L94 168 L108 190 L130 190 Q130 150 106 130Z" fill="#33405F"/>
+      <path d="M72 140 L88 140 L80 150Z M72 158 L88 158 L80 148Z" fill="#1d1d28"/>
+      <path d="M64 126 Q80 140 96 126 L96 116 L64 116Z" fill="${PHX.skin}"/>
+    </g>
+    <g class="ph-head">
+      <circle cx="40" cy="82" r="9" fill="#F7D3B0"/><circle cx="120" cy="82" r="9" fill="#F7D3B0"/>
+      <ellipse cx="80" cy="76" rx="40" ry="42" fill="#F7D3B0"/>
+      <path d="M40 70 Q34 22 84 20 Q130 20 120 70 Q116 46 84 42 Q52 44 40 70Z" fill="#6D4636"/>
+      <path d="M62 24 Q68 6 92 14 Q82 20 86 30Z" fill="#6D4636"/>
+      <path d="M58 30 Q60 38 56 44 M76 26 Q78 36 74 42 M96 28 Q98 36 94 42" fill="none" stroke="#4A2D22" stroke-width="2.4"/>
+      <ellipse cx="54" cy="90" rx="8" ry="5" fill="${PHX.blush}" opacity=".5" stroke="none"/><ellipse cx="106" cy="90" rx="8" ry="5" fill="${PHX.blush}" opacity=".5" stroke="none"/>
+      <g class="ph-eyes">${PH_EYE(64, 76, 3.8, 3.6)}${PH_EYE(96, 76, 3.8, 3.6)}</g>
+      <path d="M52 66 L74 72" fill="none" stroke="#4A2D22" stroke-width="5"/><path d="M108 66 L86 72" fill="none" stroke="#4A2D22" stroke-width="5"/>
+      <ellipse cx="80" cy="92" rx="7.5" ry="8" fill="#EFB394"/>
+      ${PH_MOUTH(80, 112, 7)}
+      <g class="ph-stache"><path d="M38 108 Q60 92 80 102 Q100 92 122 108 Q118 130 96 120 Q80 114 64 120 Q42 130 38 108Z" fill="#6D4636"/>
+      <path d="M52 108 Q64 104 74 108 M86 108 Q96 104 108 108" fill="none" stroke="#4A2D22" stroke-width="2"/></g>
+    </g>`),
+
+  /* HIPATIA: pelo castaño con moño, túnica verde agua, astrolabio dorado */
+  hipatia: PH_W(`
+    <g class="ph-body">
+      <path d="M14 190 Q14 142 54 130 L80 142 L106 130 Q146 142 146 190Z" fill="#2F9A94"/>
+      <path d="M56 130 Q80 156 104 130" fill="none" stroke="#F3E6CB" stroke-width="5"/>
+      <path d="M30 160 Q80 178 130 160" fill="none" stroke="#1F7A76" stroke-width="3"/>
+      <path d="M64 126 Q80 144 96 126 L96 116 L64 116Z" fill="${PHX.skin}"/>
+    </g>
+    <g class="ph-head">
+      <circle cx="80" cy="22" r="14" fill="#6D4636"/>
+      <path d="M38 80 Q30 22 80 20 Q130 22 122 80 Q122 50 80 46 Q38 50 38 80Z" fill="#6D4636"/>
+      <ellipse cx="80" cy="76" rx="36" ry="40" fill="${PHX.skin}"/>
+      <path d="M40 66 Q40 36 80 34 Q120 36 120 66 Q108 44 80 44 Q52 44 40 66Z" fill="#6D4636"/>
+      <path d="M42 56 Q80 30 118 56" fill="none" stroke="#E9C46A" stroke-width="5"/>
+      <circle cx="44" cy="88" r="3.6" fill="#E9C46A"/><circle cx="116" cy="88" r="3.6" fill="#E9C46A"/>
+      <ellipse cx="56" cy="90" rx="7" ry="4.5" fill="${PHX.blush}" opacity=".5" stroke="none"/><ellipse cx="104" cy="90" rx="7" ry="4.5" fill="${PHX.blush}" opacity=".5" stroke="none"/>
+      <g class="ph-eyes">${PH_EYE(65, 76, 4.4, 5.8)}${PH_EYE(95, 76, 4.4, 5.8)}</g>
+      <path d="M57 66 Q65 61 74 66" fill="none" stroke="#4A2D22" stroke-width="3"/><path d="M86 66 Q95 61 103 66" fill="none" stroke="#4A2D22" stroke-width="3"/>
+      <path d="M80 80 Q77 90 82 91" fill="none" stroke="${PHX.skinD}" stroke-width="2.6"/>
+      <path class="ph-smile" d="M68 100 Q80 112 92 100" fill="#fff" stroke-width="2.8"/>
+      ${PH_MOUTH(80, 100, 8)}
+    </g>
+    <g class="ph-astro-wrap">
+      <g class="ph-astro"><circle cx="124" cy="150" r="22" fill="#E9C46A"/><circle cx="124" cy="150" r="15" fill="#FFF2C4"/><circle cx="124" cy="150" r="5" fill="#C69A2E"/><path d="M124 128 V172 M102 150 H146 M108 134 L140 166 M140 134 L108 166" fill="none" stroke-width="2.2"/><circle cx="124" cy="126" r="4" fill="none"/></g>
+      <circle cx="106" cy="166" r="8" fill="${PHX.skin}"/>
+    </g>`),
+};
+
+const PH_LEGS = (fill, shoe) => `<g class="ph-legs"><path d="M16 186 L144 186 L151 226 L9 226Z" fill="${fill}"/><path d="M32 192 Q38 214 36 226 M128 192 Q122 214 124 226" fill="none" stroke="rgba(0,0,0,.2)" stroke-width="3"/><g class="ph-foot-l"><ellipse cx="52" cy="236" rx="19" ry="10" fill="${shoe}"/></g><g class="ph-foot-r"><ellipse cx="108" cy="236" rx="19" ry="10" fill="${shoe}"/></g></g>`;
+const PH_PIES = { socrates: ["#F3E6CB", "#B98A5A"], aristoteles: ["#8C3342", "#B98A5A"], descartes: ["#26262F", "#15151b"], nietzsche: ["#2F3A57", "#15151b"], hipatia: ["#2F9A94", "#B98A5A"] };
+const PH_SVGW = {};
+Object.keys(PH_SVG).forEach((k) => { PH_SVGW[k] = PH_SVG[k].replace('viewBox="0 0 160 190"', 'viewBox="0 0 160 250"').replace('<g class="ph-body">', PH_LEGS(PH_PIES[k][0], PH_PIES[k][1]) + '<g class="ph-body">'); });
+
+const PH_FRASES = {
+  socrates: ["Solo sé que no sé nada… ¿y tú, qué te preguntas hoy?", "Una vida sin examen no merece ser vivida.", "Conócete a ti mismo."],
+  aristoteles: ["El ser humano es, por naturaleza, un animal político.", "La excelencia es un hábito, no un acto.", "Todo comienza con el asombro."],
+  descartes: ["Pienso, luego existo. ¿Y tú, de qué dudas?", "Dudar de todo es el primer paso para saber algo seguro.", "Divide cada problema en partes pequeñas."],
+  nietzsche: ["Quien tiene un porqué para vivir encuentra casi siempre el cómo.", "Conviértete en quien eres.", "Hay que tener caos dentro para dar a luz una estrella."],
+  hipatia: ["¡Mira el cielo! Pensar también es una forma de explorar.", "Las matemáticas y las estrellas me enseñan a preguntar.", "¡Sigue estudiando, tu curiosidad es tu brújula!"],
+};
+const PH_LISTA = [
+  { id: "socrates", nombre: "Sócrates", color: "#22D3EE" },
+  { id: "aristoteles", nombre: "Aristóteles", color: "#A78BFA" },
+  { id: "descartes", nombre: "Descartes", color: "#E9C46A" },
+  { id: "nietzsche", nombre: "Nietzsche", color: "#CBD5E1" },
+  { id: "hipatia", nombre: "Hipatia", color: "#2DD4BF" },
+];
+
+function Caminante({ p, vp, movil, quieto, onHide, indice }) {
+  const [x, setX] = useState(null);
+  const [dur, setDur] = useState(0);
+  const [modo, setModo] = useState("idle");
+  const [flip, setFlip] = useState(false);
+  const [hop, setHop] = useState(false);
+  const [msg, setMsg] = useState(null);
+  const ref = React.useRef(null);
+  const R = React.useRef({ x: 0, timers: [], busy: false, walking: false });
+  const h = movil ? 62 : 80;
+  const w = Math.round(h * 160 / 250);
+  const zona = () => {
+    const W = window.innerWidth;
+    let min = 8;
+    if (W >= 900) { const sd = document.querySelector(".pf-side"); min = (sd ? sd.getBoundingClientRect().right : 272) + 14; }
+    return { min, max: Math.max(min, W - w - (W >= 900 ? 110 : 76)) };
+  };
+  const limpiar = () => { R.current.timers.forEach(clearTimeout); R.current.timers = []; };
+  const programar = (fn, ms) => { const t = setTimeout(fn, ms); R.current.timers.push(t); return t; };
+  const detener = () => {
+    const r = R.current;
+    if (r.walking && ref.current) { const left = ref.current.getBoundingClientRect().left; r.x = left; r.walking = false; setDur(0); setX(left); }
+    setModo("idle");
+  };
+  const saltar = () => { setHop(true); setTimeout(() => setHop(false), 700); };
+  const hablar = (ms) => {
+    const fr = PH_FRASES[p.id];
+    setMsg(fr[Math.floor(Math.random() * fr.length)]);
+    setTimeout(() => setMsg(null), ms || 4800);
+  };
+
+  useEffect(() => {
+    const z = zona();
+    const span = z.max - z.min;
+    const x0 = quieto ? z.min + (span * (indice + 1)) / 4 : z.min + Math.random() * span;
+    R.current.x = x0; setX(x0);
+  }, [movil]);
+
+  useEffect(() => {
+    const r = R.current;
+    if (x === null || quieto) return undefined;
+    const sig = () => {
+      if (r.busy) return;
+      const z = zona();
+      if (Math.random() < 0.8) {
+        const dest = z.min + Math.random() * (z.max - z.min);
+        const dist = Math.abs(dest - r.x);
+        if (dist < 50) { programar(sig, 1500); return; }
+        const s = dist / (26 + Math.random() * 16);
+        r.walking = true; setFlip(dest < r.x); setModo("walk"); setDur(s); setX(dest); r.x = dest;
+        programar(() => { r.walking = false; setDur(0); setModo("idle"); programar(sig, 1500 + Math.random() * 3500); }, s * 1000);
+      } else {
+        setModo("idle");
+        if (Math.random() < 0.5) hablar(4200);
+        programar(sig, 4500 + Math.random() * 4000);
+      }
+    };
+    programar(sig, 800 + indice * 1800);
+    return () => limpiar();
+  }, [x === null, quieto]);
+
+  useEffect(() => {
+    const f = () => {
+      const z = zona(), r = R.current;
+      if (r.x > z.max || r.x < z.min) { r.x = Math.min(z.max, Math.max(z.min, r.x)); setDur(0); setX(r.x); }
+    };
+    f();
+  }, [vp]);
+
+  const clic = () => {
+    const r = R.current;
+    limpiar(); r.busy = true; detener(); saltar(); hablar(5200);
+    programar(() => { r.busy = false; setModo("idle"); if (!quieto) programar(() => { r.busy = false; setX((v) => v); }, 10); }, 5200);
+  };
+  if (x === null) return null;
+  const lado = x > vp / 2 ? " right" : "";
+  const mw = x > vp / 2 ? 230 : Math.max(140, Math.min(230, vp - (movil ? 80 : 110) - x));
+  return (
+    <div ref={ref} className={"ph-w" + (modo === "walk" ? " walk" : "") + (flip ? " flip" : "") + (hop ? " hop" : "") + (msg ? " on" : "")} style={{ width: w, "--c": p.color, transform: "translateX(" + x + "px)", transition: dur ? "transform " + dur + "s linear" : "none" }}>
+      {msg && (
+        <div className={"ph-w-bubble" + lado} style={{ maxWidth: mw }} role="status">
+          <b>{p.nombre}</b>{msg}
+          <button className="pf-link-btn" onClick={onHide}>Ocultar filósofos</button>
+        </div>
+      )}
+      <button className="ph-w-btn" onClick={clic} aria-label={"Escuchar a " + p.nombre}>
+        <span className="ph-w-fig" dangerouslySetInnerHTML={{ __html: PH_SVGW[p.id] }} />
+      </button>
+    </div>
+  );
+}
+
+function FilosofosCaminantes() {
+  const [oculto, setOculto] = useState(false);
+  const [vp, setVp] = useState(() => window.innerWidth);
+  useEffect(() => { const f = () => setVp(window.innerWidth); window.addEventListener("resize", f); return () => window.removeEventListener("resize", f); }, []);
+  const movil = vp < 900;
+  const reduce = typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const lista = useMemo(() => {
+    const a = [...PH_LISTA];
+    for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+    return a.slice(0, 3);
+  }, []);
+  if (oculto) return null;
+  const mostrar = movil ? lista.slice(0, 2) : lista;
+  return (
+    <div className="ph-walkers">
+      {mostrar.map((p, i) => <Caminante key={p.id + (movil ? "m" : "d")} p={p} vp={vp} movil={movil} quieto={reduce} indice={i} onHide={() => setOculto(true)} />)}
+    </div>
+  );
+}
+
 function MisionesCard({ onGo }) {
   const [m, setM] = useState(() => leerMisiones());
   useEffect(() => {
@@ -8278,6 +8622,7 @@ function PlataformaFilosofia() {
         </button>
         <Spinozito />
         <CompanionDock page={view.page} onPerfil={() => nav("perfil")} />
+        <FilosofosCaminantes />
         <BookEasterEgg />
         <CelebrationLayer />
         {toast && (
